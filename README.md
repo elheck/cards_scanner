@@ -8,5 +8,5 @@ conan install .. --build=missing -s compiler.cppstd=20
 cmake .. --preset conan-release  
 apt install A LOT OF STUFF until conan no longer complains
 cmake --build Release/ --parallel $(nproc)
-./src/ocr_app path/to/image.png
+./mtg_ocr path/to/card_image.jpg
 ```
