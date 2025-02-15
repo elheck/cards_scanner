@@ -1,15 +1,15 @@
 
 
-target_include_directories(ocr_core PUBLIC
-    $<BUILD_INTERFACE:${CMAKE_CURRENT_SOURCE_DIR}/../include>
-    $<INSTALL_INTERFACE:include>
-)
-
 # Dependency handling
 find_package(OpenCV REQUIRED)
 find_package(Tesseract REQUIRED)
 
-add_executable(mtg_ocr main.cpp)
+add_executable(mtg_ocr app/main.cpp)
+
+target_include_directories(mtg_ocr PUBLIC
+    $<BUILD_INTERFACE:${CMAKE_CURRENT_SOURCE_DIR}/../include>
+    $<INSTALL_INTERFACE:include>
+)
 
 target_link_libraries(mtg_ocr PRIVATE 
     ${OpenCV_LIBS} 
@@ -18,7 +18,7 @@ target_link_libraries(mtg_ocr PRIVATE
 
 
 # Compiler options
-target_compile_options(ocr_core PRIVATE
+target_compile_options(mtg_ocr PRIVATE
     -Wall
     -Wextra
     -Wpedantic
