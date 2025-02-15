@@ -2,9 +2,9 @@
 tesseract/5.5.0#31d127d1b96cb3d1fae5dd45365773bc
 leptonica/1.83.1#58142618f0f8f12e20c333c45871c1d2
 opencv/4.10.0#9746006daba89d1a1e674831d9bbfcff
-cppcheck/2.16.0
-libdeflate/1.19
-openexr/3.2.3
+cppcheck/2.16.0#38d2fd5fbfb331f488fb87f4b659e8ac
+libdeflate/1.19#3ea74a4549efc14d4b1202dc4bfbf602
+openexr/3.2.3#9729562cfe706ed8d5a9a7f398d09eab
 
 
 [generators]
