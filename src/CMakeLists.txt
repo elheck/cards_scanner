@@ -2,9 +2,10 @@
 
 # Dependency handling
 find_package(OpenCV REQUIRED)
-find_package(Tesseract REQUIRED)
 
-add_executable(mtg_ocr app/main.cpp)
+add_executable(mtg_ocr app/main.cpp
+    core/imageProcessor.cpp
+)
 
 target_include_directories(mtg_ocr PUBLIC
     $<BUILD_INTERFACE:${CMAKE_CURRENT_SOURCE_DIR}/../include>
