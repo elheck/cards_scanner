@@ -20,7 +20,7 @@ TEST_F(CardDetectionTest, EndToEndCardProcessing) {
   // Process all images in the sample_cards directory
   for (const auto &entry :
        std::filesystem::directory_iterator(std::string(SAMPLE_DATA_FOLDER))) {
-    processor.loadImage(std::string(entry.path()));
+    EXPECT_TRUE(processor.loadImage(std::string(entry.path())));
     EXPECT_TRUE(processor.processCard());
     processor.displayImages();
   }
