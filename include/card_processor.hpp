@@ -1,16 +1,17 @@
 #ifndef CARD_PROCESSOR_HPP
 #define CARD_PROCESSOR_HPP
 
+#include <filesystem>
 #include <opencv2/opencv.hpp>
 #include <string>
 
 class CardProcessor {
 public:
-  CardProcessor();
-  ~CardProcessor();
+  CardProcessor() = default;
+  ~CardProcessor() = default;
 
   // Load an image from file
-  bool loadImage(const std::string &imagePath);
+  bool loadImage(const std::filesystem::path &imagePath);
 
   // Process the loaded image to normalize the card
   bool processCard();

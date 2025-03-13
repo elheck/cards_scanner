@@ -1,11 +1,7 @@
 #include "card_processor.hpp"
 #include <iostream>
 
-CardProcessor::CardProcessor() {}
-
-CardProcessor::~CardProcessor() {}
-
-bool CardProcessor::loadImage(const std::string &imagePath) {
+bool CardProcessor::loadImage(const std::filesystem::path &imagePath) {
   originalImage_ = cv::imread(imagePath);
   if (originalImage_.empty()) {
     std::cerr << "Failed to load image: " << imagePath << std::endl;
@@ -100,8 +96,6 @@ bool CardProcessor::detectCard() {
     for (const auto &corner : cardCorners_) {
       cv::circle(debugImage, corner, 5, cv::Scalar(0, 0, 255), -1);
     }
-
-    cv::imshow("Detected Card", debugImage);
     return true;
   }
 
@@ -155,16 +149,9 @@ void CardProcessor::normalizeCard() {
   // Apply the perspective transformation
   cv::warpPerspective(undistortedImage_, processedCard_, perspectiveMatrix,
                       cv::Size(normalizedWidth_, normalizedHeight_));
-
-  // Display the normalized card
-  cv::imshow("Normalized Card", processedCard_);
 }
 
 void CardProcessor::displayImages() const {
-  if (!originalImage_.empty()) {
-    cv::imshow("Original Image", originalImage_);
-  }
-
   if (!processedCard_.empty()) {
     cv::imshow("Processed Card", processedCard_);
   }

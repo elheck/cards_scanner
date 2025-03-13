@@ -16,6 +16,9 @@ project(card_scanner
 set(CMAKE_CXX_STANDARD 17)
 set(CMAKE_CXX_STANDARD_REQUIRED ON)
 
+# Enable testing at the top level
+enable_testing()
+
 # Conan configuration for version 2.x
 if(NOT EXISTS "${CMAKE_BINARY_DIR}/conan.cmake")
     message(STATUS "Downloading conan.cmake from https://github.com/conan-io/cmake-conan")
@@ -26,10 +29,13 @@ include(${CMAKE_BINARY_DIR}/conan.cmake)
 
 # Configure Conan for version 2.x
 conan_cmake_configure(
-    REQUIRES opencv/4.10.0
-    OPTIONS opencv/*:with_cuda=False 
-    opencv/*:with_wayland=False
-    opencv/*:with_gtk=True
+    REQUIRES 
+        opencv/4.10.0
+        gtest/1.13.0
+    OPTIONS 
+        opencv/*:with_cuda=False 
+        opencv/*:with_wayland=False
+        opencv/*:with_gtk=True
     GENERATORS CMakeDeps
 )
 
@@ -45,8 +51,9 @@ conan_cmake_install(
 # Add the directory where Conan places the CMake configuration files to CMAKE_PREFIX_PATH
 list(APPEND CMAKE_PREFIX_PATH "${CMAKE_BINARY_DIR}")
 
-# Find the Conan-installed OpenCV package
+# Find the Conan-installed packages
 find_package(OpenCV CONFIG REQUIRED)
+find_package(GTest CONFIG REQUIRED)
 
 # Define the core library
 add_library(card_processor
@@ -77,3 +84,6 @@ target_link_libraries(card_scanner PRIVATE
 install(TARGETS card_scanner
     RUNTIME DESTINATION bin
 )
+
+# Add the test subdirectory
+add_subdirectory(tests/integration)
