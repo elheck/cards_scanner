@@ -2,7 +2,7 @@
 #include <iostream>
 
 bool CardProcessor::loadImage(const std::filesystem::path &imagePath) {
-  originalImage_ = cv::imread(imagePath);
+  originalImage_ = cv::imread(imagePath.string());
   if (originalImage_.empty()) {
     std::cerr << "Failed to load image: " << imagePath << std::endl;
     return false;
@@ -13,150 +13,209 @@ bool CardProcessor::loadImage(const std::filesystem::path &imagePath) {
   return true;
 }
 
-bool CardProcessor::processCard() {
+bool CardProcessor::processCards() {
   if (undistortedImage_.empty()) {
-    std::cerr << "No image loaded" << std::endl;
+    std::cerr << "No image loaded.\n";
     return false;
   }
 
-  // Step 1: Undistort the image (no-op if no calibration data)
+  // Step 1: Undistort the image if you have calibration (no-op here)
   undistortImage();
 
-  // Step 2: Detect the card
-  if (!detectCard()) {
-    std::cerr << "Failed to detect card" << std::endl;
+  // Step 2: Detect all cards
+  if (!detectCards()) {
+    std::cerr << "No cards found.\n";
     return false;
   }
 
-  // Step 3: Normalize the card
-  normalizeCard();
-
-  return !processedCard_.empty();
+  // If we found at least one card, we're good
+  return !processedCards_.empty();
 }
 
 void CardProcessor::undistortImage() {
-  // In a real application, you would apply camera calibration here
-  // For simplicity, we'll just use the original image
+  // In a real application, apply camera calibration here.
+  // For now, we’ll just keep the original image.
   // undistortedImage_ = originalImage_.clone();
 }
 
-bool CardProcessor::detectCard() {
+bool CardProcessor::detectCards() {
+  processedCards_.clear();
+
   // Convert to grayscale
   cv::Mat gray;
   cv::cvtColor(undistortedImage_, gray, cv::COLOR_BGR2GRAY);
 
-  // Apply Gaussian blur to reduce noise
+  // Blur to reduce noise
   cv::GaussianBlur(gray, gray, cv::Size(5, 5), 0);
 
-  // Apply adaptive threshold to get a binary image
+  // Adaptive threshold to get a binary image (white = background, black = card
+  // edges)
   cv::Mat binary;
-  cv::adaptiveThreshold(gray, binary, 255, cv::ADAPTIVE_THRESH_GAUSSIAN_C,
-                        cv::THRESH_BINARY_INV, 11, 2);
+  cv::threshold(gray, binary, 0, 255, cv::THRESH_BINARY_INV | cv::THRESH_OTSU);
 
-  // Find contours
+  // Find external contours (to ignore inner details)
   std::vector<std::vector<cv::Point>> contours;
-  cv::findContours(binary, contours, cv::RETR_LIST, cv::CHAIN_APPROX_SIMPLE);
+  cv::findContours(binary, contours, cv::RETR_EXTERNAL,
+                   cv::CHAIN_APPROX_SIMPLE);
 
-  // Find the largest contour that could be a card
-  double maxArea = 0;
-  int maxAreaIdx = -1;
+  double maxArea = 0.0;
+  std::vector<cv::Point2f> bestCorners;
 
-  for (int i = 0; i < contours.size(); i++) {
-    double area = cv::contourArea(contours[i]);
+  // Look through all contours to find the largest valid card contour
+  for (const auto &cnt : contours) {
+    double area = cv::contourArea(cnt);
+    if (area < 1000) {
+      // Too small to be a card
+      continue;
+    }
 
-    // Filter by area - cards should be relatively large in the image
-    if (area > 1000) {
-      std::vector<cv::Point> approx;
-      cv::approxPolyDP(contours[i], approx,
-                       cv::arcLength(contours[i], true) * 0.02, true);
+    double perimeter = cv::arcLength(cnt, true);
+    std::vector<cv::Point> approx;
+    cv::approxPolyDP(cnt, approx, 0.02 * perimeter, true);
 
-      // Cards are quadrilaterals
-      if (approx.size() == 4 && cv::isContourConvex(approx)) {
-        if (area > maxArea) {
-          maxArea = area;
-          maxAreaIdx = i;
+    // Check if the approximated contour is a convex quadrilateral
+    if (approx.size() == 4 && cv::isContourConvex(approx)) {
+      std::vector<cv::Point2f> corners;
+      for (const auto &pt : approx) {
+        corners.push_back(cv::Point2f(pt.x, pt.y));
+      }
 
-          // Convert to Point2f for perspective transform
-          cardCorners_.clear();
-          for (const auto &point : approx) {
-            cardCorners_.push_back(cv::Point2f(point.x, point.y));
-          }
-        }
+      // Keep the candidate with the largest contour area
+      if (area > maxArea) {
+        maxArea = area;
+        bestCorners = corners;
       }
     }
   }
 
-  // If we found a card, draw it on the image for visualization
-  if (maxAreaIdx >= 0) {
-    cv::Mat debugImage = undistortedImage_.clone();
-    cv::drawContours(debugImage, contours, maxAreaIdx, cv::Scalar(0, 255, 0),
-                     2);
-
-    // Draw the corners
-    for (const auto &corner : cardCorners_) {
-      cv::circle(debugImage, corner, 5, cv::Scalar(0, 0, 255), -1);
+  // If a valid card candidate was found, warp it and store it
+  if (!bestCorners.empty()) {
+    cv::Mat warped = warpCard(bestCorners);
+    if (!warped.empty()) {
+      processedCards_.push_back(warped);
     }
-    return true;
   }
 
-  return false;
+  return !processedCards_.empty();
 }
 
-void CardProcessor::normalizeCard() {
-  if (cardCorners_.size() != 4) {
-    std::cerr << "Invalid card corners" << std::endl;
-    return;
+std::vector<cv::Point2f>
+CardProcessor::sortCorners(const std::vector<cv::Point2f> &corners) {
+  // We assume exactly 4 corners.
+  // 1) Sort by y, then x
+  std::vector<cv::Point2f> sorted = corners;
+  std::sort(sorted.begin(), sorted.end(),
+            [](const cv::Point2f &a, const cv::Point2f &b) {
+              return (a.y < b.y) || (a.y == b.y && a.x < b.x);
+            });
+
+  // After this sort:
+  //   sorted[0], sorted[1] are the top two (by y)
+  //   sorted[2], sorted[3] are the bottom two
+  // We still need to check which is left vs. right.
+
+  // The top-left should be sorted[0] if it has smaller x than sorted[1]
+  cv::Point2f topLeft, topRight, bottomLeft, bottomRight;
+  if (sorted[0].x < sorted[1].x) {
+    topLeft = sorted[0];
+    topRight = sorted[1];
+  } else {
+    topLeft = sorted[1];
+    topRight = sorted[0];
   }
 
-  // Sort the corners to ensure they are in the correct order:
-  // 0: top-left, 1: top-right, 2: bottom-right, 3: bottom-left
-
-  // First, find the center of the corners
-  cv::Point2f center(0, 0);
-  for (const auto &corner : cardCorners_) {
-    center += corner;
-  }
-  center.x /= 4;
-  center.y /= 4;
-
-  // Sort corners based on their position relative to the center
-  std::vector<cv::Point2f> sortedCorners(4);
-
-  for (const auto &corner : cardCorners_) {
-    if (corner.x < center.x && corner.y < center.y) {
-      sortedCorners[0] = corner; // top-left
-    } else if (corner.x > center.x && corner.y < center.y) {
-      sortedCorners[1] = corner; // top-right
-    } else if (corner.x > center.x && corner.y > center.y) {
-      sortedCorners[2] = corner; // bottom-right
-    } else if (corner.x < center.x && corner.y > center.y) {
-      sortedCorners[3] = corner; // bottom-left
-    }
+  // The bottom-left should be sorted[2] if it has smaller x than sorted[3]
+  if (sorted[2].x < sorted[3].x) {
+    bottomLeft = sorted[2];
+    bottomRight = sorted[3];
+  } else {
+    bottomLeft = sorted[3];
+    bottomRight = sorted[2];
   }
 
-  // Define the destination points for the perspective transform
-  std::vector<cv::Point2f> dstPoints = {
-      cv::Point2f(0, 0),                                // top-left
-      cv::Point2f(normalizedWidth_, 0),                 // top-right
-      cv::Point2f(normalizedWidth_, normalizedHeight_), // bottom-right
-      cv::Point2f(0, normalizedHeight_)                 // bottom-left
-  };
+  // Return in order: TL, TR, BR, BL
+  std::vector<cv::Point2f> dst{topLeft, topRight, bottomRight, bottomLeft};
+  return dst;
+}
 
-  // Calculate the perspective transform matrix
-  cv::Mat perspectiveMatrix =
-      cv::getPerspectiveTransform(sortedCorners, dstPoints);
+cv::Mat CardProcessor::warpCard(const std::vector<cv::Point2f> &corners) {
+  // Ensure corners are in the correct order
+  if (corners.size() != 4) {
+    return cv::Mat();
+  }
 
-  // Apply the perspective transformation
-  cv::warpPerspective(undistortedImage_, processedCard_, perspectiveMatrix,
+  auto sorted = sortCorners(corners);
+
+  // Destination corners for the normalized card
+  std::vector<cv::Point2f> dstPoints{
+      cv::Point2f(0.f, 0.f), cv::Point2f((float)normalizedWidth_, 0.f),
+      cv::Point2f((float)normalizedWidth_, (float)normalizedHeight_),
+      cv::Point2f(0.f, (float)normalizedHeight_)};
+
+  // Compute perspective transform
+  cv::Mat M = cv::getPerspectiveTransform(sorted, dstPoints);
+
+  // Warp the card
+  cv::Mat warped;
+  cv::warpPerspective(undistortedImage_, warped, M,
                       cv::Size(normalizedWidth_, normalizedHeight_));
+  return warped;
 }
 
-void CardProcessor::displayImages() const {
-  if (!processedCard_.empty()) {
-    cv::imshow("Processed Card", processedCard_);
+void CardProcessor::displayResults() const {
+  // Show each card in its own window for debugging
+  for (size_t i = 0; i < processedCards_.size(); i++) {
+    std::string winName = "Card " + std::to_string(i);
+    cv::imshow(winName, processedCards_[i]);
   }
-
   cv::waitKey(0);
 }
 
-cv::Mat CardProcessor::getProcessedCard() const { return processedCard_; }
+bool CardProcessor::saveResults(const std::filesystem::path &originalPath) {
+  if (processedCards_.empty()) {
+    std::cerr << "No processed cards to save.\n";
+    return false;
+  }
+
+  // 1. Get the parent directory of the original image
+  auto parentDir = originalPath.parent_path();
+
+  // 2. Generate a subfolder name based on the current time up to the minute
+  auto now = std::chrono::system_clock::now();
+  auto in_time_t = std::chrono::system_clock::to_time_t(now);
+  std::ostringstream oss;
+  oss << std::put_time(std::localtime(&in_time_t), "%Y%m%d_%H%M");
+  auto subfolder = parentDir / oss.str();
+
+  // 3. Create the subfolder
+  try {
+    std::filesystem::create_directory(subfolder);
+  } catch (std::exception &e) {
+    std::cerr << "Failed to create directory: " << e.what() << std::endl;
+    return false;
+  }
+
+  // 4. Save each processed card using a filename based on the current second
+  // and millisecond
+  for (size_t i = 0; i < processedCards_.size(); ++i) {
+    auto nowCard = std::chrono::system_clock::now();
+    auto in_time_t_card = std::chrono::system_clock::to_time_t(nowCard);
+    auto ms = std::chrono::duration_cast<std::chrono::milliseconds>(
+                  nowCard.time_since_epoch()) %
+              1000;
+
+    std::ostringstream fileName;
+    fileName << "card_" << std::put_time(std::localtime(&in_time_t_card), "%S")
+             << "_" << ms.count() << ".png";
+
+    auto outPath = subfolder / fileName.str();
+    if (!cv::imwrite(outPath.string(), processedCards_[i])) {
+      std::cerr << "Failed to save " << outPath << std::endl;
+      // Optionally, handle the error (continue or return false)
+    }
+  }
+
+  std::cout << "Saved " << processedCards_.size() << " card(s) to " << subfolder
+            << std::endl;
+  return true;
+}

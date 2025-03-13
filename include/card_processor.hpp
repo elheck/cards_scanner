@@ -1,55 +1,41 @@
-#ifndef CARD_PROCESSOR_HPP
-#define CARD_PROCESSOR_HPP
+#pragma once
 
 #include <filesystem>
 #include <opencv2/opencv.hpp>
-#include <string>
+#include <vector>
 
 class CardProcessor {
 public:
-  CardProcessor() = default;
-  ~CardProcessor() = default;
-
-  // Load an image from file
+  // Load the original image
   bool loadImage(const std::filesystem::path &imagePath);
 
-  // Process the loaded image to normalize the card
-  bool processCard();
+  // Process *all* cards found in the image
+  bool processCards();
 
-  // Display the original and processed images
-  void displayImages() const;
+  // Show the detected & warped cards (for debugging)
+  void displayResults() const;
 
-  // Get the processed card image
-  cv::Mat getProcessedCard() const;
+  // Save processed card images to files (instead of showing them)
+  bool saveResults(const std::filesystem::path &originalPath);
 
 private:
-  // Undistort the image using camera calibration (if available)
-  void undistortImage();
+  // Internal helpers
+  void undistortImage(); // no-op unless you have camera calibration
+  bool detectCards();    // find all quadrilaterals that could be cards
+  cv::Mat warpCard(const std::vector<cv::Point2f> &corners);
 
-  // Detect the card in the image and extract it
-  bool detectCard();
+  // Helper to reorder corners: top-left, top-right, bottom-right, bottom-left
+  std::vector<cv::Point2f> sortCorners(const std::vector<cv::Point2f> &corners);
 
-  // Normalize the card to a standard size and orientation
-  void normalizeCard();
-
-  // Original image
+private:
+  // Input images
   cv::Mat originalImage_;
-
-  // Undistorted image
   cv::Mat undistortedImage_;
 
-  // Processed card image
-  cv::Mat processedCard_;
+  // Output for each detected card
+  std::vector<cv::Mat> processedCards_;
 
-  // Card contour points
-  std::vector<cv::Point2f> cardCorners_;
-
-  // Standard MTG card aspect ratio (63mm x 88mm)
-  const float cardAspectRatio_ = 88.0f / 63.0f;
-
-  // Standard output size for normalized cards
-  const int normalizedWidth_ = 630;
-  const int normalizedHeight_ = 880;
+  // Desired card size after perspective transform
+  static constexpr int normalizedWidth_ = 480;
+  static constexpr int normalizedHeight_ = 680;
 };
-
-#endif // CARD_PROCESSOR_HPP

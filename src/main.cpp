@@ -52,13 +52,13 @@ int main(int argc, char *argv[]) {
   }
 
   // Process the card
-  if (!processor.processCard()) {
+  if (!processor.processCards()) {
     std::cerr << "Error: Failed to process card" << std::endl;
     return 1;
   }
 
   // Display the images
-  processor.displayImages();
+  processor.displayResults();
 
   return 0;
 }
