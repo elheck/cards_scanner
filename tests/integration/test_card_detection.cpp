@@ -6,6 +6,7 @@
 #include <opencv2/opencv.hpp>
 #include <string>
 
+
 class CardDetectionTest : public ::testing::Test {
 protected:
   void SetUp() override {
@@ -18,7 +19,7 @@ protected:
 // Integration test combining detection and text reading
 TEST_F(CardDetectionTest, EndToEndCardProcessing) {
   // Create a card processor
-  CardDetector processor;
+  detect::CardDetector processor;
   // Process all images in the sample_cards directory
   for (const auto &entry :
        std::filesystem::directory_iterator(std::string(SAMPLE_DATA_FOLDER))) {

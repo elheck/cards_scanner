@@ -4,6 +4,8 @@
 #include <opencv2/opencv.hpp>
 #include <vector>
 
+namespace detect {
+
 class CardDetector {
 public:
   // Load the original image
@@ -33,3 +35,5 @@ private:
   static constexpr int normalizedWidth_ = 480;
   static constexpr int normalizedHeight_ = 680;
 };
+
+} // namespace detect

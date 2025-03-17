@@ -4,6 +4,8 @@
 #include <iostream>
 #include <string>
 
+using namespace detect;
+
 void printUsage(const char *programName) {
   std::cout << "Usage: " << programName << " [options]" << std::endl;
   std::cout << "Options:" << std::endl;

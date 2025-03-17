@@ -2,6 +2,8 @@
 #include <iostream>
 #include <stdexcept>
 
+namespace detect {
+
 bool CardDetector::loadImage(const std::filesystem::path &imagePath) {
   originalImage_ = cv::imread(imagePath.string());
   if (originalImage_.empty()) {
@@ -164,3 +166,5 @@ cv::Mat CardDetector::warpCard(const std::vector<cv::Point2f> &corners) {
                       cv::Size(normalizedWidth_, normalizedHeight_));
   return warped;
 }
+
+} // namespace detect
