@@ -1,4 +1,6 @@
-#include "card_processor.hpp"
+#include <detection/card_processor.hpp>
+#include <misc/pic_helper.hpp>
+
 #include <iostream>
 #include <string>
 
@@ -51,14 +53,9 @@ int main(int argc, char *argv[]) {
     return 1;
   }
 
-  // Process the card
-  if (!processor.processCards()) {
-    std::cerr << "Error: Failed to process card" << std::endl;
-    return 1;
-  }
+  auto processed_card = processor.processCards();
 
-  // Display the images
-  processor.displayResults();
+  cs::displayResults(processed_card);
 
   return 0;
 }

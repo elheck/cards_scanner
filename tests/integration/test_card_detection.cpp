@@ -1,4 +1,6 @@
-#include "card_processor.hpp"
+#include <detection/card_processor.hpp>
+#include <misc/pic_helper.hpp>
+
 #include <filesystem>
 #include <gtest/gtest.h>
 #include <opencv2/opencv.hpp>
@@ -22,8 +24,8 @@ TEST_F(CardDetectionTest, EndToEndCardProcessing) {
        std::filesystem::directory_iterator(std::string(SAMPLE_DATA_FOLDER))) {
     std::cout << std::string(entry.path()) << std::endl;
     EXPECT_TRUE(processor.loadImage(std::string(entry.path())));
-    EXPECT_TRUE(processor.processCards());
-    EXPECT_TRUE(processor.saveResults(entry.path()));
+    auto pic = processor.processCards();
+    EXPECT_TRUE(cs::saveResults(entry.path(), pic));
   }
   EXPECT_TRUE(true);
 }

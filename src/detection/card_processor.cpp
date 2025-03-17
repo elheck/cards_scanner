@@ -1,5 +1,6 @@
-#include "card_processor.hpp"
+#include <detection/card_processor.hpp>
 #include <iostream>
+#include <stdexcept>
 
 bool CardProcessor::loadImage(const std::filesystem::path &imagePath) {
   originalImage_ = cv::imread(imagePath.string());
@@ -13,10 +14,9 @@ bool CardProcessor::loadImage(const std::filesystem::path &imagePath) {
   return true;
 }
 
-bool CardProcessor::processCards() {
+cv::Mat CardProcessor::processCards() {
   if (undistortedImage_.empty()) {
-    std::cerr << "No image loaded.\n";
-    return false;
+    throw std::runtime_error("no cards");
   }
 
   // Step 1: Undistort the image if you have calibration (no-op here)
@@ -24,12 +24,15 @@ bool CardProcessor::processCards() {
 
   // Step 2: Detect all cards
   if (!detectCards()) {
-    std::cerr << "No cards found.\n";
-    return false;
+    throw std::runtime_error("no cards detected");
+  }
+
+  if (processedCards_.empty()) {
+    throw std::runtime_error("Not one card found");
   }
 
   // If we found at least one card, we're good
-  return !processedCards_.empty();
+  return processedCards_.at(0);
 }
 
 void CardProcessor::undistortImage() {
@@ -160,62 +163,4 @@ cv::Mat CardProcessor::warpCard(const std::vector<cv::Point2f> &corners) {
   cv::warpPerspective(undistortedImage_, warped, M,
                       cv::Size(normalizedWidth_, normalizedHeight_));
   return warped;
-}
-
-void CardProcessor::displayResults() const {
-  // Show each card in its own window for debugging
-  for (size_t i = 0; i < processedCards_.size(); i++) {
-    std::string winName = "Card " + std::to_string(i);
-    cv::imshow(winName, processedCards_[i]);
-  }
-  cv::waitKey(0);
-}
-
-bool CardProcessor::saveResults(const std::filesystem::path &originalPath) {
-  if (processedCards_.empty()) {
-    std::cerr << "No processed cards to save.\n";
-    return false;
-  }
-
-  // 1. Get the parent directory of the original image
-  auto parentDir = originalPath.parent_path();
-
-  // 2. Generate a subfolder name based on the current time up to the minute
-  auto now = std::chrono::system_clock::now();
-  auto in_time_t = std::chrono::system_clock::to_time_t(now);
-  std::ostringstream oss;
-  oss << std::put_time(std::localtime(&in_time_t), "%Y%m%d_%H%M");
-  auto subfolder = parentDir / oss.str();
-
-  // 3. Create the subfolder
-  try {
-    std::filesystem::create_directory(subfolder);
-  } catch (std::exception &e) {
-    std::cerr << "Failed to create directory: " << e.what() << std::endl;
-    return false;
-  }
-
-  // 4. Save each processed card using a filename based on the current second
-  // and millisecond
-  for (size_t i = 0; i < processedCards_.size(); ++i) {
-    auto nowCard = std::chrono::system_clock::now();
-    auto in_time_t_card = std::chrono::system_clock::to_time_t(nowCard);
-    auto ms = std::chrono::duration_cast<std::chrono::milliseconds>(
-                  nowCard.time_since_epoch()) %
-              1000;
-
-    std::ostringstream fileName;
-    fileName << "card_" << std::put_time(std::localtime(&in_time_t_card), "%S")
-             << "_" << ms.count() << ".png";
-
-    auto outPath = subfolder / fileName.str();
-    if (!cv::imwrite(outPath.string(), processedCards_[i])) {
-      std::cerr << "Failed to save " << outPath << std::endl;
-      // Optionally, handle the error (continue or return false)
-    }
-  }
-
-  std::cout << "Saved " << processedCards_.size() << " card(s) to " << subfolder
-            << std::endl;
-  return true;
 }

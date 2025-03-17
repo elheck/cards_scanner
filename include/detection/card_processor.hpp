@@ -10,13 +10,7 @@ public:
   bool loadImage(const std::filesystem::path &imagePath);
 
   // Process *all* cards found in the image
-  bool processCards();
-
-  // Show the detected & warped cards (for debugging)
-  void displayResults() const;
-
-  // Save processed card images to files (instead of showing them)
-  bool saveResults(const std::filesystem::path &originalPath);
+  cv::Mat processCards();
 
 private:
   // Internal helpers

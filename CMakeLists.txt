@@ -57,7 +57,8 @@ find_package(GTest CONFIG REQUIRED)
 
 # Define the core library
 add_library(card_processor
-    src/card_processor.cpp
+    src/detection/card_processor.cpp
+    src/misc/pic_helper.cpp
 )
 
 # Include directories for the core library
