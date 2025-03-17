@@ -1,8 +1,8 @@
-#include <detection/card_processor.hpp>
+#include <detection/card_detector.hpp>
 #include <iostream>
 #include <stdexcept>
 
-bool CardProcessor::loadImage(const std::filesystem::path &imagePath) {
+bool CardDetector::loadImage(const std::filesystem::path &imagePath) {
   originalImage_ = cv::imread(imagePath.string());
   if (originalImage_.empty()) {
     std::cerr << "Failed to load image: " << imagePath << std::endl;
@@ -14,7 +14,7 @@ bool CardProcessor::loadImage(const std::filesystem::path &imagePath) {
   return true;
 }
 
-cv::Mat CardProcessor::processCards() {
+cv::Mat CardDetector::processCards() {
   if (undistortedImage_.empty()) {
     throw std::runtime_error("no cards");
   }
@@ -35,13 +35,13 @@ cv::Mat CardProcessor::processCards() {
   return processedCards_.at(0);
 }
 
-void CardProcessor::undistortImage() {
+void CardDetector::undistortImage() {
   // In a real application, apply camera calibration here.
   // For now, we’ll just keep the original image.
   // undistortedImage_ = originalImage_.clone();
 }
 
-bool CardProcessor::detectCards() {
+bool CardDetector::detectCards() {
   processedCards_.clear();
 
   // Convert to grayscale
@@ -103,7 +103,7 @@ bool CardProcessor::detectCards() {
 }
 
 std::vector<cv::Point2f>
-CardProcessor::sortCorners(const std::vector<cv::Point2f> &corners) {
+CardDetector::sortCorners(const std::vector<cv::Point2f> &corners) {
   // We assume exactly 4 corners.
   // 1) Sort by y, then x
   std::vector<cv::Point2f> sorted = corners;
@@ -141,7 +141,7 @@ CardProcessor::sortCorners(const std::vector<cv::Point2f> &corners) {
   return dst;
 }
 
-cv::Mat CardProcessor::warpCard(const std::vector<cv::Point2f> &corners) {
+cv::Mat CardDetector::warpCard(const std::vector<cv::Point2f> &corners) {
   // Ensure corners are in the correct order
   if (corners.size() != 4) {
     return cv::Mat();

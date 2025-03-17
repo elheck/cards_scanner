@@ -4,7 +4,7 @@
 #include <opencv2/opencv.hpp>
 #include <vector>
 
-class CardProcessor {
+class CardDetector {
 public:
   // Load the original image
   bool loadImage(const std::filesystem::path &imagePath);

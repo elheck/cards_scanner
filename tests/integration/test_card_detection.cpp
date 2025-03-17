@@ -1,4 +1,4 @@
-#include <detection/card_processor.hpp>
+#include <detection/card_detector.hpp>
 #include <misc/pic_helper.hpp>
 
 #include <filesystem>
@@ -18,7 +18,7 @@ protected:
 // Integration test combining detection and text reading
 TEST_F(CardDetectionTest, EndToEndCardProcessing) {
   // Create a card processor
-  CardProcessor processor;
+  CardDetector processor;
   // Process all images in the sample_cards directory
   for (const auto &entry :
        std::filesystem::directory_iterator(std::string(SAMPLE_DATA_FOLDER))) {

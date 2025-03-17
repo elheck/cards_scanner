@@ -1,4 +1,4 @@
-#include <detection/card_processor.hpp>
+#include <detection/card_detector.hpp>
 #include <misc/pic_helper.hpp>
 
 #include <iostream>
@@ -38,7 +38,7 @@ int main(int argc, char *argv[]) {
   }
 
   // Create a card processor
-  CardProcessor processor;
+  CardDetector processor;
 
   // Check if image path is provided
   if (imagePath.empty()) {
