@@ -30,12 +30,8 @@ include(${CMAKE_BINARY_DIR}/conan.cmake)
 # Configure Conan for version 2.x
 conan_cmake_configure(
     REQUIRES 
-        opencv/4.10.0
         gtest/1.13.0
     OPTIONS 
-        opencv/*:with_cuda=False 
-        opencv/*:with_wayland=False
-        opencv/*:with_gtk=True
     GENERATORS CMakeDeps
 )
 
@@ -52,7 +48,7 @@ conan_cmake_install(
 list(APPEND CMAKE_PREFIX_PATH "${CMAKE_BINARY_DIR}")
 
 # Find the Conan-installed packages
-find_package(OpenCV CONFIG REQUIRED)
+find_package(OpenCV REQUIRED)
 find_package(GTest CONFIG REQUIRED)
 
 # Define the core library
@@ -63,13 +59,17 @@ add_library(card_processor
 )
 
 # Include directories for the core library
-target_include_directories(card_processor PUBLIC
-    ${CMAKE_SOURCE_DIR}/include
+target_include_directories(card_processor 
+    PUBLIC
+        ${CMAKE_SOURCE_DIR}/include
+    PRIVATE
+        ${OpenCV_INCLUDE_DIRS} 
 )
 
 # Link libraries for the core library
-target_link_libraries(card_processor PUBLIC
-    opencv::opencv
+target_link_libraries(card_processor 
+    PRIVATE
+        ${OpenCV_LIBS}
 )
 
 # Add executable
@@ -80,11 +80,6 @@ add_executable(card_scanner
 # Link the executable with the core library
 target_link_libraries(card_scanner PRIVATE
     card_processor
-)
-
-# Install targets
-install(TARGETS card_scanner
-    RUNTIME DESTINATION bin
 )
 
 # Add the test subdirectory
