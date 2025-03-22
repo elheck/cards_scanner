@@ -3,10 +3,10 @@
 
 ## Build and run
 ```bash
-mkdir -p build && cd build
-conan install .. --build=missing -s compiler.cppstd=20
-cmake .. --preset conan-release  
-apt install A LOT OF STUFF until conan no longer complains
-cmake --build Release/ --parallel $(nproc)
-./mtg_ocr path/to/card_image.jpg
+see top level scripts
 ```
+
+Contract:
+This is running on a raspi. 
+- On start up a bin config (bin numbers to use, fullness of bins) should be sent to the device from a pc
+- After ocr the name, set, collectors number, image hash, bin identifier should be sent by mqtt or similar to pc to check with database.
