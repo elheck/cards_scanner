@@ -1,0 +1,118 @@
+---
+- name: Install OpenCV 4.10.0 on Raspberry Pi
+  hosts: raspi
+  become: true
+  vars:
+    opencv_version: "4.10.0"
+    opencv_source_dir: "{{ ansible_env.HOME }}/opencv"
+    opencv_contrib_source_dir: "{{ ansible_env.HOME }}/opencv_contrib"
+    opencv_build_dir: "{{ ansible_env.HOME }}/opencv/build"
+    opencv_install_dir: "/usr/local"
+  tasks:
+    - name: Ensure HOME directory exists
+      ansible.builtin.file:
+        path: "{{ ansible_env.HOME }}"
+        state: directory
+        mode: "0400"
+
+    - name: Remove any existing OpenCV directories
+      ansible.builtin.file:
+        path: "{{ item }}"
+        state: absent
+      loop:
+        - "{{ opencv_source_dir }}"
+        - "{{ opencv_contrib_source_dir }}"
+
+    - name: Download OpenCV source code
+      ansible.builtin.get_url:
+        url: "https://github.com/opencv/opencv/archive/{{ opencv_version }}.zip"
+        dest: "/home/pi/opencv.zip"
+        mode: "0755"
+
+    - name: Download OpenCV contrib modules
+      ansible.builtin.get_url:
+        url: "https://github.com/opencv/opencv_contrib/archive/{{ opencv_version }}.zip"
+        dest: "/home/pi/opencv_contrib.zip"
+        mode: "0755"
+
+    - name: Unzip OpenCV source code
+      ansible.builtin.unarchive:
+        src: "/home/pi/opencv.zip"
+        dest: "/home/pi/"
+        remote_src: true
+
+    - name: Unzip OpenCV contrib modules
+      ansible.builtin.unarchive:
+        src: "/home/pi/opencv_contrib.zip"
+        dest: "/home/pi/"
+        remote_src: true
+
+    - name: Rename OpenCV directories for consistency
+      ansible.builtin.command:
+        cmd: "mv /home/pi/opencv-{{ opencv_version }} {{ opencv_source_dir }}"
+      args:
+        creates: "{{ opencv_source_dir }}"
+
+    - name: Rename OpenCV contrib directories for consistency
+      ansible.builtin.command:
+        cmd: "mv /home/pi/opencv_contrib-{{ opencv_version }} {{ opencv_contrib_source_dir }}"
+      args:
+        creates: "{{ opencv_contrib_source_dir }}"
+
+    - name: Create build directory
+      ansible.builtin.file:
+        path: "{{ opencv_build_dir }}"
+        state: directory
+        mode: "0755"
+
+    - name: Run CMake to configure the OpenCV build
+      ansible.builtin.command:
+        cmd: >
+          cmake -D CMAKE_BUILD_TYPE=RELEASE
+                -D CMAKE_INSTALL_PREFIX={{ opencv_install_dir }}
+                -D OPENCV_EXTRA_MODULES_PATH={{ opencv_contrib_source_dir }}/modules
+                -D ENABLE_NEON=ON
+                -D WITH_OPENMP=ON
+                -D WITH_OPENCL=OFF
+                -D BUILD_TIFF=ON
+                -D WITH_FFMPEG=ON
+                -D WITH_TBB=ON
+                -D BUILD_TBB=ON
+                -D WITH_GSTREAMER=ON
+                -D BUILD_TESTS=OFF
+                -D WITH_EIGEN=OFF
+                -D WITH_V4L=ON
+                -D WITH_LIBV4L=ON
+                -D WITH_VTK=OFF
+                -D WITH_QT=OFF
+                -D WITH_PROTOBUF=ON
+                -D OPENCV_ENABLE_NONFREE=ON
+                -D INSTALL_C_EXAMPLES=OFF
+                -D INSTALL_PYTHON_EXAMPLES=OFF
+                -D PYTHON3_PACKAGES_PATH=/usr/lib/python3/dist-packages
+                -D OPENCV_GENERATE_PKGCONFIG=ON
+                -D BUILD_EXAMPLES=OFF ..
+        args:
+          chdir: "{{ opencv_build_dir }}"
+
+    - name: Compile OpenCV (this may take several hours)
+      ansible.builtin.command:
+        cmd: "make -j{{ ansible_processor_vcpus }}"
+        args:
+          chdir: "{{ opencv_build_dir }}"
+
+    - name: Install OpenCV
+      ansible.builtin.command:
+        cmd: "make install"
+        args:
+          chdir: "{{ opencv_build_dir }}"
+
+    - name: Update shared library cache
+      ansible.builtin.command: "ldconfig"
+
+    - name: Clean up build files to free up space
+      ansible.builtin.command:
+        cmd: "make clean"
+        args:
+          chdir: "{{ opencv_build_dir }}"
+
