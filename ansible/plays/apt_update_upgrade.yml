@@ -1,14 +1,14 @@
 - name: Update and upgrade apt packages
   hosts: raspi
-  become: yes
+  become: true
   tasks:
     - name: Update apt cache
       ansible.builtin.apt:
-        update_cache: yes
+        update_cache: true
         cache_valid_time: 86400
       register: update_result
       # Even if this task fails, we want the playbook to continue so we can report the error.
-      ignore_errors: yes
+      ignore_errors: true
 
     - name: Report apt cache update result (Success)
       ansible.builtin.debug:
@@ -22,9 +22,9 @@
 
     - name: Upgrade all packages
       ansible.builtin.apt:
-        upgrade: yes
+        upgrade: true
       register: upgrade_result
-      ignore_errors: yes
+      ignore_errors: true
 
     - name: Report package upgrade result (Success)
       ansible.builtin.debug:
@@ -38,9 +38,9 @@
 
     - name: Remove unused packages (autoremove)
       ansible.builtin.apt:
-        autoremove: yes
+        autoremove: true
       register: autoremove_result
-      ignore_errors: yes
+      ignore_errors: true
 
     - name: Report autoremove result (Success)
       ansible.builtin.debug:
