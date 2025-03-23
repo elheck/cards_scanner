@@ -17,3 +17,9 @@ This is running on a raspi.
 - SD card is set up and expanded
 - SSH Key was added for passwordless access using ssh-copy-id
 - LC_ALL locale was set to utf-8
+
+
+# TODO for isntall ansible
+install conan
+add to path
+new profile detect
