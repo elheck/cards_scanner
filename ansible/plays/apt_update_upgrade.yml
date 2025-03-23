@@ -1,0 +1,53 @@
+- name: Update and upgrade apt packages
+  hosts: raspi
+  become: yes
+  tasks:
+    - name: Update apt cache
+      ansible.builtin.apt:
+        update_cache: yes
+        cache_valid_time: 86400
+      register: update_result
+      # Even if this task fails, we want the playbook to continue so we can report the error.
+      ignore_errors: yes
+
+    - name: Report apt cache update result (Success)
+      ansible.builtin.debug:
+        msg: "Apt cache update succeeded on {{ inventory_hostname }}: {{ update_result }}"
+      when: update_result is defined and not update_result.failed
+
+    - name: Report apt cache update result (Failure)
+      ansible.builtin.debug:
+        msg: "Apt cache update FAILED on {{ inventory_hostname }}: {{ update_result.msg }}"
+      when: update_result is defined and update_result.failed
+
+    - name: Upgrade all packages
+      ansible.builtin.apt:
+        upgrade: yes
+      register: upgrade_result
+      ignore_errors: yes
+
+    - name: Report package upgrade result (Success)
+      ansible.builtin.debug:
+        msg: "Package upgrade succeeded on {{ inventory_hostname }}: {{ upgrade_result }}"
+      when: upgrade_result is defined and not upgrade_result.failed
+
+    - name: Report package upgrade result (Failure)
+      ansible.builtin.debug:
+        msg: "Package upgrade FAILED on {{ inventory_hostname }}: {{ upgrade_result.msg }}"
+      when: upgrade_result is defined and upgrade_result.failed
+
+    - name: Remove unused packages (autoremove)
+      ansible.builtin.apt:
+        autoremove: yes
+      register: autoremove_result
+      ignore_errors: yes
+
+    - name: Report autoremove result (Success)
+      ansible.builtin.debug:
+        msg: "Autoremove succeeded on {{ inventory_hostname }}: {{ autoremove_result }}"
+      when: autoremove_result is defined and not autoremove_result.failed
+
+    - name: Report autoremove result (Failure)
+      ansible.builtin.debug:
+        msg: "Autoremove FAILED on {{ inventory_hostname }}: {{ autoremove_result.msg }}"
+      when: autoremove_result is defined and autoremove_result.failed
