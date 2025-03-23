@@ -16,4 +16,4 @@ This is running on a raspi.
 - SD card with recent raspian
 - SD card is set up and expanded
 - SSH Key was added for passwordless access using ssh-copy-id
-- 
+- LC_ALL locale was set to utf-8
