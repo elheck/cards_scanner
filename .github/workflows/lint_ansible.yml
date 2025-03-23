@@ -13,7 +13,7 @@ permissions:
   contents: read
 
 jobs:
-  build:
+  lint:
     runs-on: ubuntu-latest
     steps:
     - uses: actions/checkout@v4
@@ -25,5 +25,6 @@ jobs:
       run: |
         python -m pip install --upgrade pip
         python -m pip install ansible
+        python -m pip install ansible-lint
     - name: Lint Ansible YAML Files
       run: find ansible -type f -name '*.yml' -exec ansible-lint {} +
