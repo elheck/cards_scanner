@@ -38,7 +38,7 @@ install_ansible_lint() {
 # Function to run ansible-lint on all playbooks
 run_ansible_lint() {
   # Define the directory containing your playbooks
-  PLAYBOOK_DIR="./ansible"
+  PLAYBOOK_DIR="ansible"
 
   # Check if the directory exists
   if [ ! -d "$PLAYBOOK_DIR" ]; then
