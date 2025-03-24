@@ -30,9 +30,12 @@ include(${CMAKE_BINARY_DIR}/conan.cmake)
 # Configure Conan for version 2.x
 conan_cmake_configure(
     REQUIRES 
-        gtest/1.13.0
+        gtest/1.13.0#b79e331e44bc2ce4fca3cf59c56387b6
+        spdlog/1.15.1#92e99f07f134481bce4b70c1a41060e7
+        libassert/2.1.4#de095beca7f09b01b613dd4e03574f88
     OPTIONS 
-    GENERATORS CMakeDeps
+    GENERATORS 
+        CMakeDeps
 )
 
 # Install dependencies

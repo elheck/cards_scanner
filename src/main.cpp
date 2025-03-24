@@ -1,6 +1,9 @@
 #include <detection/card_detector.hpp>
 #include <misc/pic_helper.hpp>
 
+#include <spdlog/spdlog.h>
+#include <libassert/assert.hpp>
+
 #include <iostream>
 #include <string>
 
@@ -16,7 +19,7 @@ void printUsage(const char *programName) {
 
 int main(int argc, char *argv[]) {
   std::string imagePath;
-
+  ASSERT(argc > 1, "No arguments given", argc);
   // Parse command line arguments
   for (int i = 1; i < argc; i++) {
     std::string arg = argv[i];
@@ -28,12 +31,12 @@ int main(int argc, char *argv[]) {
       if (i + 1 < argc) {
         imagePath = argv[++i];
       } else {
-        std::cerr << "Error: Missing file path" << std::endl;
+        spdlog::critical("Error: Missing file path");
         printUsage(argv[0]);
         return 1;
       }
     } else {
-      std::cerr << "Error: Unknown option: " << arg << std::endl;
+      spdlog::critical("Error: Unknown option: {}", arg);
       printUsage(argv[0]);
       return 1;
     }
@@ -44,20 +47,21 @@ int main(int argc, char *argv[]) {
 
   // Check if image path is provided
   if (imagePath.empty()) {
-    std::cerr << "Error: No input file specified" << std::endl;
+    spdlog::warn("Error: No input file specified");
     printUsage(argv[0]);
     return 1;
   }
 
   // Load the image
   if (!processor.loadImage(imagePath)) {
-    std::cerr << "Error: Failed to load image" << std::endl;
+    spdlog::critical("Error: Failed to load image");
     return 1;
   }
 
   auto processed_card = processor.processCards();
-
-  cs::displayResults(processed_card);
+  //this should change to be handed a root folder by cmake compile definitions
+  auto picture_folder = std::filesystem::path(imagePath).parent_path().parent_path() / "sample_out";
+  cs::saveImage(picture_folder, processed_card, "test_out.jpg");
 
   return 0;
 }

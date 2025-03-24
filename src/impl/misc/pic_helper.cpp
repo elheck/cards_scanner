@@ -1,6 +1,14 @@
-#include <filesystem>
+
 #include <misc/pic_helper.hpp>
+
+#include <spdlog/spdlog.h>
+
 #include <stdexcept>
+#include <chrono>
+#include <iomanip>
+#include <sstream>
+#include <string>
+
 namespace cs {
 
 void displayResults(cv::Mat pic) {
@@ -8,41 +16,37 @@ void displayResults(cv::Mat pic) {
   cv::waitKey(0);
 }
 
-bool saveResults(const std::filesystem::path &originalPath, cv::Mat pic) {
+bool saveImage(const std::filesystem::path &savePath, cv::Mat pic, std::string name) {
+    try {
+        // Ensure the directory exists
+        std::filesystem::create_directories(savePath);
 
-  // 1. Get the parent directory of the original image
-  auto parentDir = originalPath.parent_path();
+        // Generate a unique name if not provided
+        if (name.empty()) {
+            auto now = std::chrono::system_clock::now();
+            auto in_time_t = std::chrono::system_clock::to_time_t(now);
+            auto ms = std::chrono::duration_cast<std::chrono::milliseconds>(
+                now.time_since_epoch()) % 1000;
 
-  // 2. Generate a subfolder name based on the current time up to the minute
-  auto now = std::chrono::system_clock::now();
-  auto in_time_t = std::chrono::system_clock::to_time_t(now);
-  std::ostringstream oss;
-  oss << std::put_time(std::localtime(&in_time_t), "%Y%m%d_%H%M");
-  auto subfolder = parentDir / oss.str();
+            std::ostringstream oss;
+            oss << "image_" << std::put_time(std::localtime(&in_time_t), "%Y%m%d_%H%M%S")
+                << "_" << std::setfill('0') << std::setw(3) << ms.count() << ".png";
+            name = oss.str();
+        }
 
-  // 3. Create the subfolder
-  try {
-    std::filesystem::create_directory(subfolder);
-  } catch (std::exception &e) {
-    std::cerr << "Failed to create directory: " << e.what() << std::endl;
-    return false;
-  }
-  auto nowCard = std::chrono::system_clock::now();
-  auto in_time_t_card = std::chrono::system_clock::to_time_t(nowCard);
-  auto ms = std::chrono::duration_cast<std::chrono::milliseconds>(
-                nowCard.time_since_epoch()) %
-            1000;
+        // Construct the full path
+        auto fullPath = savePath / name;
 
-  std::ostringstream fileName;
-  fileName << "card_" << std::put_time(std::localtime(&in_time_t_card), "%S")
-           << "_" << ms.count() << ".png";
+        // Save the image
+        if (!cv::imwrite(fullPath.string(), pic)) {
+            throw std::runtime_error("Failed to write image to file");
+        }
 
-  auto outPath = subfolder / fileName.str();
-  if (!cv::imwrite(outPath.string(), pic)) {
-      throw std::runtime_error("Can't write pic to file");
-  }
-
-  std::cout << "Saved card(s) to " << subfolder << std::endl;
-  return true;
+        spdlog::info("Saved image to {}",fullPath.string());
+        return true;
+    } catch (const std::exception &e) {
+        spdlog::critical("Error saving image: {}",e.what());
+        return false;
+    }
 }
 } // namespace cs

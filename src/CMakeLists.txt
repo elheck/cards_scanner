@@ -1,6 +1,8 @@
 
 # Find the Conan-installed packages
 find_package(OpenCV REQUIRED)
+find_package(spdlog REQUIRED)
+find_package(libassert REQUIRED)
 
 
 # Define the core library
@@ -22,6 +24,8 @@ target_include_directories(card_processor_lib
 target_link_libraries(card_processor_lib 
     PRIVATE
         ${OpenCV_LIBS}
+        spdlog::spdlog
+        libassert::assert
 )
 
 # Add executable
@@ -39,4 +43,6 @@ target_include_directories(card_scanner
 target_link_libraries(card_scanner 
     PRIVATE
         card_processor_lib
+        spdlog::spdlog
+        libassert::assert
 )
