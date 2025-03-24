@@ -47,40 +47,7 @@ conan_cmake_install(
 # Add the directory where Conan places the CMake configuration files to CMAKE_PREFIX_PATH
 list(APPEND CMAKE_PREFIX_PATH "${CMAKE_BINARY_DIR}")
 
-# Find the Conan-installed packages
-find_package(OpenCV REQUIRED)
-find_package(GTest CONFIG REQUIRED)
-
-# Define the core library
-add_library(card_processor
-    src/detection/card_detector.cpp
-    src/detection/tilt_corrector.cpp
-    src/misc/pic_helper.cpp
-)
-
-# Include directories for the core library
-target_include_directories(card_processor 
-    PUBLIC
-        ${CMAKE_SOURCE_DIR}/include
-    PRIVATE
-        ${OpenCV_INCLUDE_DIRS} 
-)
-
-# Link libraries for the core library
-target_link_libraries(card_processor 
-    PRIVATE
-        ${OpenCV_LIBS}
-)
-
-# Add executable
-add_executable(card_scanner
-    src/main.cpp
-)
-
-# Link the executable with the core library
-target_link_libraries(card_scanner PRIVATE
-    card_processor
-)
-
+# Add source directories
+add_subdirectory(src)
 # Add the test subdirectory
 add_subdirectory(tests/integration)

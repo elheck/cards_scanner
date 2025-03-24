@@ -2,6 +2,7 @@
 if(NOT TARGET GTest::gtest)
     find_package(GTest REQUIRED)
 endif()
+find_package(OpenCV REQUIRED)
 
 # Define the integration test executable
 add_executable(test_card_detection
@@ -12,12 +13,13 @@ target_compile_definitions(test_card_detection PUBLIC "SAMPLE_DATA_FOLDER=\"${CM
 
 # Include directories for the test
 target_include_directories(test_card_detection PRIVATE
-    ${CMAKE_SOURCE_DIR}/include
+    ${CMAKE_SOURCE_DIR}/src/include
+    ${OpenCV_INCLUDE_DIRS}
 )
 
 # Link the test with the card_processor library and testing framework
 target_link_libraries(test_card_detection PRIVATE
-    card_processor
+    card_processor_lib
     GTest::gtest
     GTest::gtest_main
 )
