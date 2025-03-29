@@ -9,19 +9,19 @@ namespace detect {
 class CardDetector {
 public:
   // Load the original image
-  bool loadImage(const std::filesystem::path &imagePath);
+  [[nodiscard]] bool loadImage(const std::filesystem::path &imagePath);
 
   // Process *all* cards found in the image
-  cv::Mat processCards();
+  [[nodiscard]] cv::Mat processCards();
 
 private:
   // Internal helpers
   void undistortImage(); // no-op unless you have camera calibration
-  bool detectCards();    // find all quadrilaterals that could be cards
-  cv::Mat warpCard(const std::vector<cv::Point2f> &corners);
+  [[nodiscard]] bool detectCards();    // find all quadrilaterals that could be cards
+  [[nodiscard]] cv::Mat warpCard(const std::vector<cv::Point2f> &corners);
 
   // Helper to reorder corners: top-left, top-right, bottom-right, bottom-left
-  std::vector<cv::Point2f> sortCorners(const std::vector<cv::Point2f> &corners);
+  [[nodiscard]] std::vector<cv::Point2f> sortCorners(const std::vector<cv::Point2f> &corners);
 
 private:
   // Input images

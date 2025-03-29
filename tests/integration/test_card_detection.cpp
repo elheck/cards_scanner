@@ -1,4 +1,5 @@
 #include <detection/card_detector.hpp>
+#include <detection/tilt_corrector.hpp>
 #include <misc/pic_helper.hpp>
 
 #include <filesystem>
@@ -25,7 +26,26 @@ TEST_F(CardDetectionTest, EndToEndCardProcessing) {
        std::filesystem::directory_iterator(std::string(SAMPLE_DATA_FOLDER))) {
     EXPECT_TRUE(processor.loadImage(std::string(entry.path())));
     auto pic = processor.processCards();
-    auto folder = std::filesystem::path(entry.path().parent_path().parent_path() / "sample_out");
+    auto folder = std::filesystem::path(entry.path().parent_path().parent_path() / "tests" / "detection");
+    EXPECT_TRUE(cs::saveImage(folder, pic));
+  }
+  EXPECT_TRUE(true);
+}
+
+
+//Integration test for card detection and tilt correction
+TEST_F(CardDetectionTest, CardDetectionAndTiltCorrection) {
+  // Create a card processor
+  detect::CardDetector processor;
+  // Process all images in the sample_cards directory
+  for (const auto &entry :
+       std::filesystem::directory_iterator(std::string(SAMPLE_DATA_FOLDER))) {
+    EXPECT_TRUE(processor.loadImage(std::string(entry.path())));
+    auto pic = processor.processCards();
+    // Correct tilt
+    pic = detect::correctCardTilt(pic);
+    // Save the processed image
+    auto folder = std::filesystem::path(entry.path().parent_path().parent_path() / "tests" / "tilt_correction");
     EXPECT_TRUE(cs::saveImage(folder, pic));
   }
   EXPECT_TRUE(true);

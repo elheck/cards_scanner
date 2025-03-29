@@ -49,4 +49,15 @@ bool saveImage(const std::filesystem::path &savePath, cv::Mat pic, std::string n
         return false;
     }
 }
+
+void checkImage(const cv::Mat &pic, const std::string &operationName) {
+    if (pic.empty()) {
+        throw std::runtime_error("Image is empty");
+        spdlog::critical("Error in {}: Image is empty", operationName);
+    }
+    if (pic.channels() != 3) {
+        throw std::runtime_error("Image must have 3 channels (RGB)");
+    }
+}
+
 } // namespace cs

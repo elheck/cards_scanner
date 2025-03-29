@@ -9,6 +9,7 @@ find_package(libassert REQUIRED)
 add_library(card_processor_lib
     impl/detection/card_detector.cpp
     impl/detection/tilt_corrector.cpp
+    impl/detection/region_extraction.cpp
     impl/misc/pic_helper.cpp
 )
 

@@ -49,27 +49,25 @@ bool CardDetector::detectCards() {
 
     // Calculate dynamic parameters based on image size
     int minDim = std::min(undistortedImage_.cols, undistortedImage_.rows);
-    int blurRadius = ((minDim / 100 + 1) / 2) * 2 + 1;
+    int blurRadius = ((minDim / 100 + 1) / 2) * 2 + 1;  // Round to nearest odd
     int dilateRadius = static_cast<int>(std::floor(minDim / 67.0 + 0.5));
-    int threshRadius = ((minDim / 20 + 1) / 2) * 2 + 1;
+    int threshRadius = ((minDim / 20 + 1) / 2) * 2 + 1; // Round to nearest odd
 
     // Convert to grayscale
     cv::Mat gray;
     cv::cvtColor(undistortedImage_, gray, cv::COLOR_BGR2GRAY);
 
-    // Enhance contrast using CLAHE
-    cv::Ptr<cv::CLAHE> clahe = cv::createCLAHE(2.0, cv::Size(8,8));
-    cv::Mat enhanced;
-    clahe->apply(gray, enhanced);
+    // Apply median blur to better remove background textures
+    cv::Mat blurred;
+    cv::medianBlur(gray, blurred, blurRadius);
 
-    // Apply bilateral filter to preserve edges while reducing noise
-    cv::Mat filtered;
-    cv::bilateralFilter(enhanced, filtered, 9, 75, 75);
+    // Apply Gaussian blur after median blur for better edge detection
+    cv::GaussianBlur(blurred, blurred, cv::Size(5, 5), 0);
 
     // Apply adaptive threshold with adjusted parameters
     cv::Mat binary;
-    cv::adaptiveThreshold(filtered, binary, 255, cv::ADAPTIVE_THRESH_GAUSSIAN_C,
-                         cv::THRESH_BINARY_INV, threshRadius, 8);
+    cv::adaptiveThreshold(blurred, binary, 255, cv::ADAPTIVE_THRESH_GAUSSIAN_C,
+                         cv::THRESH_BINARY_INV, threshRadius, 10);
 
     // Create kernel for morphological operations
     cv::Mat kernel = cv::getStructuringElement(cv::MORPH_RECT, 
@@ -82,7 +80,7 @@ bool CardDetector::detectCards() {
     // Then erode to clean up noise
     cv::erode(morphed, morphed, kernel);
 
-    // Find contours
+    // Find contours with modified parameters
     std::vector<std::vector<cv::Point>> contours;
     std::vector<cv::Vec4i> hierarchy;
     cv::findContours(morphed, contours, hierarchy, cv::RETR_EXTERNAL, 
@@ -101,10 +99,10 @@ bool CardDetector::detectCards() {
         
         // Magic card aspect ratio is approximately 2.5/3.5 ≈ 0.714
         const double targetAspectRatio = 0.714;
-        const double aspectRatioTolerance = 0.1; // Stricter tolerance
-
-        // Area should be at least 15% of the image and aspect ratio should be close to Magic card ratio
-        if (area > 0.15 * minDim * minDim && 
+        const double aspectRatioTolerance = 0.2;
+        
+        // Area should be at least 10% of the image
+        if (area > 0.1 * minDim * minDim && 
             std::abs(aspectRatio - targetAspectRatio) < aspectRatioTolerance) {
             validContours.push_back(contour);
         }
@@ -120,9 +118,9 @@ bool CardDetector::detectCards() {
             return cv::contourArea(c1) < cv::contourArea(c2);
         });
 
-    // Approximate the contour with higher precision
+    // Approximate the contour to get corners
     std::vector<cv::Point> approxCurve;
-    double epsilon = 0.01 * cv::arcLength(*maxContour, true); // More precise approximation
+    double epsilon = 0.02 * cv::arcLength(*maxContour, true);
     cv::approxPolyDP(*maxContour, approxCurve, epsilon, true);
 
     // Check if we have a valid quadrilateral
@@ -141,7 +139,7 @@ bool CardDetector::detectCards() {
         }
     }
 
-    // Fallback to rotated rectangle if approximation failed
+    // Alternative: If approximation didn't work, try using the bounding rect
     cv::RotatedRect boundingBox = cv::minAreaRect(*maxContour);
     cv::Point2f vertices[4];
     boundingBox.points(vertices);

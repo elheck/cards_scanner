@@ -9,5 +9,8 @@ namespace cs {
 void displayResults(cv::Mat pic);
 
 // Save processed card images to files (instead of showing them)
-bool saveImage(const std::filesystem::path &savePath, cv::Mat pic, std::string name = "");
+[[nodiscard]] bool saveImage(const std::filesystem::path &savePath, cv::Mat pic, std::string name = "");
+
+// Check if the image is valid (non-empty and 3 channels)
+void checkImage(const cv::Mat &pic, const std::string &operationName);
 } // namespace cs

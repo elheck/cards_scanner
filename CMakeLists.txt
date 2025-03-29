@@ -50,6 +50,7 @@ conan_cmake_install(
 # Add the directory where Conan places the CMake configuration files to CMAKE_PREFIX_PATH
 list(APPEND CMAKE_PREFIX_PATH "${CMAKE_BINARY_DIR}")
 
+
 # Add source directories
 add_subdirectory(src)
 # Add the test subdirectory
