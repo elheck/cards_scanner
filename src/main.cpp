@@ -66,13 +66,13 @@ int main(int argc, char *argv[]) {
   processed_card = correctCardTilt(processed_card);
   cs::checkImage(processed_card, "Tilt correction");
 
-  // RegionExtractor region_extractor(processed_card);
-  // auto region = region_extractor.extractNameRegion();
-  // cs::checkImage(region, "Region extraction");
+  RegionExtractor region_extractor(processed_card);
+  auto region = region_extractor.extractNameRegion();
+  cs::checkImage(region, "Region extraction");
 
   //this should change to be handed a root folder by cmake compile definitions
   auto picture_folder = std::filesystem::path(imagePath).parent_path().parent_path() / "sample_out";
-  if(!cs::saveImage(picture_folder, processed_card, "test_out.jpg")){
+  if(!cs::saveImage(picture_folder, region, "test_out.jpg")){
     spdlog::critical("Error: Failed to save image");
     return 1;
   }

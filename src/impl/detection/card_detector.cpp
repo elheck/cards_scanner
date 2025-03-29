@@ -212,11 +212,11 @@ cv::Mat CardDetector::warpCard(const std::vector<cv::Point2f> &corners) {
       cv::Point2f(0.f, (float)normalizedHeight_)};
 
   // Compute perspective transform
-  cv::Mat M = cv::getPerspectiveTransform(sorted, dstPoints);
+  cv::Mat transform = cv::getPerspectiveTransform(sorted, dstPoints);
 
   // Warp the card
   cv::Mat warped;
-  cv::warpPerspective(undistortedImage_, warped, M,
+  cv::warpPerspective(undistortedImage_, warped, transform,
                       cv::Size(normalizedWidth_, normalizedHeight_));
   return warped;
 }

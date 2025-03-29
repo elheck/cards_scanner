@@ -8,19 +8,16 @@ RegionExtractor::RegionExtractor(cv::Mat &image) : image_(image) {}
 RegionExtractor::~RegionExtractor() = default;
 
 cv::Mat RegionExtractor::extractNameRegion() {
-    // Magic card name dimensions:
-    // - Keep at 3% from left edge
-    // - Start at 3% from top
-    // - Cover 75% of width (reduced from 80%)
-    // - Height about 6% of card height
-    int x = static_cast<int>(image_.cols * 0.03);   // Start at 3% from left edge
-    int y = static_cast<int>(image_.rows * 0.03);   // Start at 3% from top
+    int x = static_cast<int>(image_.cols * 0.04);   // Start at 3% from left edge
+    int y = static_cast<int>(image_.rows * 0.035);   // Start at 3% from top
     int width = static_cast<int>(image_.cols * 0.75); // Cover 75% of card width
-    int height = static_cast<int>(image_.rows * 0.06); // Height 6% of card height
+    int height = static_cast<int>(image_.rows * 0.07); // Height 6% of card height
 
-    // Extract the region
+    // Create the region and draw it on a copy of the original image
     cv::Rect nameRegion(x, y, width, height);
-    return image_(nameRegion).clone();
+    cv::Mat result = image_.clone();
+    cv::rectangle(result, nameRegion, cv::Scalar(0, 255, 0), 2); // Draw green rectangle
+    return result;
 }
 
 cv::Mat RegionExtractor::extractCollectorNumberRegion() {
