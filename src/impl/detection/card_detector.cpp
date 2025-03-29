@@ -1,6 +1,7 @@
 #include <detection/card_detector.hpp>
 #include <iostream>
 #include <stdexcept>
+#include <cmath>
 
 namespace detect {
 
@@ -44,64 +45,119 @@ void CardDetector::undistortImage() {
 }
 
 bool CardDetector::detectCards() {
-  processedCards_.clear();
+    processedCards_.clear();
 
-  // Convert to grayscale
-  cv::Mat gray;
-  cv::cvtColor(undistortedImage_, gray, cv::COLOR_BGR2GRAY);
+    // Calculate dynamic parameters based on image size
+    int minDim = std::min(undistortedImage_.cols, undistortedImage_.rows);
+    int blurRadius = ((minDim / 100 + 1) / 2) * 2 + 1;
+    int dilateRadius = static_cast<int>(std::floor(minDim / 67.0 + 0.5));
+    int threshRadius = ((minDim / 20 + 1) / 2) * 2 + 1;
 
-  // Blur to reduce noise
-  cv::GaussianBlur(gray, gray, cv::Size(5, 5), 0);
+    // Convert to grayscale
+    cv::Mat gray;
+    cv::cvtColor(undistortedImage_, gray, cv::COLOR_BGR2GRAY);
 
-  // Adaptive threshold to get a binary image (white = background, black = card
-  // edges)
-  cv::Mat binary;
-  cv::threshold(gray, binary, 0, 255, cv::THRESH_BINARY_INV | cv::THRESH_OTSU);
+    // Enhance contrast using CLAHE
+    cv::Ptr<cv::CLAHE> clahe = cv::createCLAHE(2.0, cv::Size(8,8));
+    cv::Mat enhanced;
+    clahe->apply(gray, enhanced);
 
-  // Find external contours (to ignore inner details)
-  std::vector<std::vector<cv::Point>> contours;
-  cv::findContours(binary, contours, cv::RETR_EXTERNAL,
-                   cv::CHAIN_APPROX_SIMPLE);
+    // Apply bilateral filter to preserve edges while reducing noise
+    cv::Mat filtered;
+    cv::bilateralFilter(enhanced, filtered, 9, 75, 75);
 
-  double maxArea = 0.0;
-  std::vector<cv::Point2f> bestCorners;
+    // Apply adaptive threshold with adjusted parameters
+    cv::Mat binary;
+    cv::adaptiveThreshold(filtered, binary, 255, cv::ADAPTIVE_THRESH_GAUSSIAN_C,
+                         cv::THRESH_BINARY_INV, threshRadius, 8);
 
-  // Look through all contours to find the largest valid card contour
-  for (const auto &cnt : contours) {
-    double area = cv::contourArea(cnt);
-    if (area < 1000) {
-      // Too small to be a card
-      continue;
+    // Create kernel for morphological operations
+    cv::Mat kernel = cv::getStructuringElement(cv::MORPH_RECT, 
+                                             cv::Size(dilateRadius, dilateRadius));
+    
+    // First dilate to connect edges
+    cv::Mat morphed;
+    cv::dilate(binary, morphed, kernel);
+    
+    // Then erode to clean up noise
+    cv::erode(morphed, morphed, kernel);
+
+    // Find contours
+    std::vector<std::vector<cv::Point>> contours;
+    std::vector<cv::Vec4i> hierarchy;
+    cv::findContours(morphed, contours, hierarchy, cv::RETR_EXTERNAL, 
+                    cv::CHAIN_APPROX_SIMPLE);
+
+    if (contours.empty()) {
+        return false;
     }
 
-    double perimeter = cv::arcLength(cnt, true);
-    std::vector<cv::Point> approx;
-    cv::approxPolyDP(cnt, approx, 0.02 * perimeter, true);
+    // Filter contours by area and aspect ratio
+    std::vector<std::vector<cv::Point>> validContours;
+    for (const auto& contour : contours) {
+        double area = cv::contourArea(contour);
+        cv::Rect boundRect = cv::boundingRect(contour);
+        double aspectRatio = static_cast<double>(boundRect.width) / boundRect.height;
+        
+        // Magic card aspect ratio is approximately 2.5/3.5 ≈ 0.714
+        const double targetAspectRatio = 0.714;
+        const double aspectRatioTolerance = 0.1; // Stricter tolerance
 
-    // Check if the approximated contour is a convex quadrilateral
-    if (approx.size() == 4 && cv::isContourConvex(approx)) {
-      std::vector<cv::Point2f> corners;
-      for (const auto &pt : approx) {
-        corners.push_back(cv::Point2f(pt.x, pt.y));
-      }
-
-      // Keep the candidate with the largest contour area
-      if (area > maxArea) {
-        maxArea = area;
-        bestCorners = corners;
-      }
+        // Area should be at least 15% of the image and aspect ratio should be close to Magic card ratio
+        if (area > 0.15 * minDim * minDim && 
+            std::abs(aspectRatio - targetAspectRatio) < aspectRatioTolerance) {
+            validContours.push_back(contour);
+        }
     }
-  }
 
-  // If a valid card candidate was found, warp it and store it
-  if (!bestCorners.empty()) {
-    cv::Mat warped = warpCard(bestCorners);
+    if (validContours.empty()) {
+        return false;
+    }
+
+    // Find the contour with maximum area among valid contours
+    auto maxContour = std::max_element(validContours.begin(), validContours.end(),
+        [](const std::vector<cv::Point>& c1, const std::vector<cv::Point>& c2) {
+            return cv::contourArea(c1) < cv::contourArea(c2);
+        });
+
+    // Approximate the contour with higher precision
+    std::vector<cv::Point> approxCurve;
+    double epsilon = 0.01 * cv::arcLength(*maxContour, true); // More precise approximation
+    cv::approxPolyDP(*maxContour, approxCurve, epsilon, true);
+
+    // Check if we have a valid quadrilateral
+    if (approxCurve.size() == 4 && cv::isContourConvex(approxCurve)) {
+        std::vector<cv::Point2f> corners;
+        for (const auto& point : approxCurve) {
+            corners.emplace_back(static_cast<float>(point.x), 
+                               static_cast<float>(point.y));
+        }
+
+        // Sort corners and warp the card
+        cv::Mat warped = warpCard(corners);
+        if (!warped.empty()) {
+            processedCards_.push_back(warped);
+            return true;
+        }
+    }
+
+    // Fallback to rotated rectangle if approximation failed
+    cv::RotatedRect boundingBox = cv::minAreaRect(*maxContour);
+    cv::Point2f vertices[4];
+    boundingBox.points(vertices);
+    
+    std::vector<cv::Point2f> corners;
+    for (int i = 0; i < 4; ++i) {
+        corners.push_back(vertices[i]);
+    }
+
+    cv::Mat warped = warpCard(corners);
     if (!warped.empty()) {
-      processedCards_.push_back(warped);
+        processedCards_.push_back(warped);
+        return true;
     }
-  }
 
-  return !processedCards_.empty();
+    return false;
 }
 
 std::vector<cv::Point2f>
