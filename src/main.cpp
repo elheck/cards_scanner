@@ -4,11 +4,12 @@
 
 #include <spdlog/spdlog.h>
 #include <libassert/assert.hpp>
+#include <gsl/span>
 
 #include <iostream>
 #include <string>
 
-void printUsage(const char *programName) {
+void printUsage(std::string_view programName) {
     spdlog::info("Usage: {} [options]", programName);
     spdlog::info("Options:");
     spdlog::info("  -f, --file <path>    Process a card from an image file");
@@ -16,26 +17,29 @@ void printUsage(const char *programName) {
 }
 
 int main(int argc, char *argv[]) {
+    const gsl::span args{argv, static_cast<std::size_t>(argc)};
     std::filesystem::path imagePath;
-    ASSERT(argc > 1, "No arguments given", argc);
+    
+    ASSERT(args.size() > 1, "No arguments given", args.size());
+
     // Parse command line arguments
-    for (int i = 1; i < argc; i++) {
-        std::string arg = argv[i];
+    for (size_t i = 1; i < args.size(); ++i) {
+        std::string_view arg{args[i]};
 
         if (arg == "-h" || arg == "--help") {
-            printUsage(argv[0]);
+            printUsage(args[0]);
             return 0;
         } else if (arg == "-f" || arg == "--file") {
-            if (i + 1 < argc) {
-                imagePath = argv[++i];
+            if (i + 1 < args.size()) {
+                imagePath = args[++i];
             } else {
                 spdlog::critical("Error: Missing file path");
-                printUsage(argv[0]);
+                printUsage(args[0]);
                 return 1;
             }
         } else {
             spdlog::critical("Error: Unknown option: {}", arg);
-            printUsage(argv[0]);
+            printUsage(args[0]);
             return 1;
         }
     }
@@ -43,7 +47,7 @@ int main(int argc, char *argv[]) {
     // Check if image path is provided
     if (imagePath.empty()) {
         spdlog::warn("Error: No input file specified");
-        printUsage(argv[0]);
+        printUsage(args[0]);
         return 1;
     }
 

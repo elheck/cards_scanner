@@ -1,12 +1,18 @@
 #include <detection/tilt_corrector.hpp>
-
 #include <opencv2/opencv.hpp>
 #include <opencv2/imgproc.hpp>
 #include <opencv2/highgui.hpp>
-
 #include <cmath>
 
 namespace detect {
+
+namespace {
+    // Image processing parameters
+    constexpr int GAUSSIAN_KERNEL_SIZE = 5;
+    constexpr double CANNY_THRESHOLD_LOW = 50.0;
+    constexpr double CANNY_THRESHOLD_HIGH = 150.0;
+    constexpr int GAUSSIAN_SIGMA = 0;  // 0 means auto-compute
+}
 
 cv::Mat correctCardTilt(const cv::Mat &cardImage) {
     // Step 1: Convert to grayscale
@@ -15,11 +21,13 @@ cv::Mat correctCardTilt(const cv::Mat &cardImage) {
 
     // Step 2: Apply GaussianBlur to reduce noise
     cv::Mat blurred;
-    cv::GaussianBlur(gray, blurred, cv::Size(5, 5), 0);
+    cv::GaussianBlur(gray, blurred, 
+                     cv::Size(GAUSSIAN_KERNEL_SIZE, GAUSSIAN_KERNEL_SIZE),
+                     GAUSSIAN_SIGMA);
 
     // Step 3: Use edge detection (Canny)
     cv::Mat edges;
-    cv::Canny(blurred, edges, 50, 150);
+    cv::Canny(blurred, edges, CANNY_THRESHOLD_LOW, CANNY_THRESHOLD_HIGH);
 
     // Step 4: Find contours
     std::vector<std::vector<cv::Point>> contours;
@@ -55,7 +63,8 @@ cv::Mat correctCardTilt(const cv::Mat &cardImage) {
     cv::Mat rotationMatrix = cv::getRotationMatrix2D(center, tiltAngle, 1.0);
 
     cv::Mat correctedImage;
-    cv::warpAffine(cardImage, correctedImage, rotationMatrix, cardImage.size(), cv::INTER_LINEAR, cv::BORDER_CONSTANT, cv::Scalar(0, 0, 0));
+    cv::warpAffine(cardImage, correctedImage, rotationMatrix, cardImage.size(), 
+                   cv::INTER_LINEAR, cv::BORDER_CONSTANT, cv::Scalar(0, 0, 0));
 
     return correctedImage;
 }

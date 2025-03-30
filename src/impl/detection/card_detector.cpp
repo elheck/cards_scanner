@@ -5,6 +5,14 @@
 
 namespace detect {
 
+namespace {
+    // Card detection thresholds
+    constexpr double MIN_CARD_AREA_RATIO = 0.1;  // Card must be at least 10% of image
+    constexpr double CARD_ASPECT_RATIO = 0.714;  // Standard MTG card ratio (2.5/3.5)
+    constexpr double ASPECT_RATIO_TOLERANCE = 0.2;
+    constexpr double CONTOUR_APPROX_EPSILON = 0.02;
+}
+
 namespace detail {
 
 bool loadImage(const std::filesystem::path &imagePath, cv::Mat& originalImage, cv::Mat& undistortedImage) {
@@ -139,13 +147,8 @@ bool detectCards(const cv::Mat& undistortedImage, std::vector<cv::Mat>& processe
         cv::Rect boundRect = cv::boundingRect(contour);
         double aspectRatio = static_cast<double>(boundRect.width) / boundRect.height;
         
-        // Magic card aspect ratio is approximately 2.5/3.5 ≈ 0.714
-        const double targetAspectRatio = 0.714;
-        const double aspectRatioTolerance = 0.2;
-        
-        // Area should be at least 10% of the image
-        if (area > 0.1 * minDim * minDim && 
-            std::abs(aspectRatio - targetAspectRatio) < aspectRatioTolerance) {
+        if (area > MIN_CARD_AREA_RATIO * minDim * minDim && 
+            std::abs(aspectRatio - CARD_ASPECT_RATIO) < ASPECT_RATIO_TOLERANCE) {
             validContours.push_back(contour);
         }
     }
@@ -162,7 +165,7 @@ bool detectCards(const cv::Mat& undistortedImage, std::vector<cv::Mat>& processe
 
     // Approximate the contour to get corners
     std::vector<cv::Point> approxCurve;
-    double epsilon = 0.02 * cv::arcLength(*maxContour, true);
+    double epsilon = CONTOUR_APPROX_EPSILON * cv::arcLength(*maxContour, true);
     cv::approxPolyDP(*maxContour, approxCurve, epsilon, true);
 
     // Check if we have a valid quadrilateral

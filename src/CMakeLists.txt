@@ -2,6 +2,7 @@
 find_package(OpenCV REQUIRED)
 find_package(spdlog REQUIRED)
 find_package(libassert REQUIRED)
+find_package(Microsoft.GSL REQUIRED)
 
 # Define the core library
 add_library(card_processor_lib
@@ -26,6 +27,7 @@ target_link_libraries(card_processor_lib
         ${OpenCV_LIBS}
         spdlog::spdlog
         libassert::assert
+        Microsoft.GSL::GSL
 )
 
 # Add workflow library
@@ -64,4 +66,5 @@ target_link_libraries(card_scanner
         workflow_lib
         spdlog::spdlog
         libassert::assert
+        Microsoft.GSL::GSL
 )
