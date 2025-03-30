@@ -35,6 +35,10 @@ namespace {
         constexpr double text_top_ratio = 0.618;    // 61.8% from top
         constexpr double text_width_ratio = 0.792;  // 79.2% of card width
         constexpr double text_height_ratio = 0.147; // 14.7% of card height
+
+        // Drawing constants
+        constexpr int max_color = 255;  // Maximum RGB value
+        constexpr int rect_thickness = 2;  // Rectangle border thickness
     }
 }
 
@@ -46,7 +50,7 @@ cv::Mat extractNameRegion(const cv::Mat& image) {
 
     cv::Rect name_region(x, y, width, height);
     cv::Mat result = image.clone();
-    cv::rectangle(result, name_region, cv::Scalar(0, 255, 0), 2);
+    cv::rectangle(result, name_region, cv::Scalar(0, regions::max_color, 0), regions::rect_thickness);
     return result;
 }
 
@@ -58,7 +62,7 @@ cv::Mat extractCollectorNumberRegion(const cv::Mat& image) {
 
     cv::Rect collector_region(x, y, width, height);
     cv::Mat result = image.clone();
-    cv::rectangle(result, collector_region, cv::Scalar(255, 0, 0), 2);
+    cv::rectangle(result, collector_region, cv::Scalar(regions::max_color, 0, 0), regions::rect_thickness);
     return result;
 }
 
@@ -70,7 +74,7 @@ cv::Mat extractSetNameRegion(const cv::Mat& image) {
 
     cv::Rect set_region(x, y, width, height);
     cv::Mat result = image.clone();
-    cv::rectangle(result, set_region, cv::Scalar(0, 0, 255), 2);
+    cv::rectangle(result, set_region, cv::Scalar(0, 0, regions::max_color), regions::rect_thickness);
     return result;
 }
 
@@ -82,7 +86,7 @@ cv::Mat extractArtRegion(const cv::Mat& image) {
 
     cv::Rect art_region(x, y, width, height);
     cv::Mat result = image.clone();
-    cv::rectangle(result, art_region, cv::Scalar(255, 255, 0), 2);
+    cv::rectangle(result, art_region, cv::Scalar(regions::max_color, regions::max_color, 0), regions::rect_thickness);
     return result;
 }
 
@@ -94,7 +98,7 @@ cv::Mat extractTextRegion(const cv::Mat& image) {
 
     cv::Rect text_region(x, y, width, height);
     cv::Mat result = image.clone();
-    cv::rectangle(result, text_region, cv::Scalar(0, 255, 255), 2);
+    cv::rectangle(result, text_region, cv::Scalar(0, regions::max_color, regions::max_color), regions::rect_thickness);
     return result;
 }
 

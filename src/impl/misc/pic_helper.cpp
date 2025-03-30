@@ -12,7 +12,7 @@
 namespace misc {
 
 namespace {
-    constexpr int MILLISECONDS_MOD = 1000;  // For timestamp generation
+    constexpr int milliseconds_mod = 1000;  // For timestamp generation
 }
 
 void displayResults(const cv::Mat& pic) {
@@ -33,7 +33,7 @@ bool saveImage(const std::filesystem::path &savePath, const cv::Mat& pic, std::s
         if (name.empty()) {
             auto now = std::chrono::system_clock::now();
             auto ms = std::chrono::duration_cast<std::chrono::milliseconds>(
-                now.time_since_epoch()) % MILLISECONDS_MOD;
+                now.time_since_epoch()) % milliseconds_mod;
             
             name = "card_" + std::to_string(ms.count()) + ".jpg";
         }

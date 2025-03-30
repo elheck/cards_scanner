@@ -8,10 +8,19 @@ namespace detect {
 
 namespace {
     // Card detection thresholds
-    constexpr double MIN_CARD_AREA_RATIO = 0.1;  // Card must be at least 10% of image
-    constexpr double CARD_ASPECT_RATIO = 0.714;  // Standard MTG card ratio (2.5/3.5)
-    constexpr double ASPECT_RATIO_TOLERANCE = 0.2;
-    constexpr double CONTOUR_APPROX_EPSILON = 0.02;
+    constexpr double min_card_area_ratio = 0.1;  // Card must be at least 10% of image
+    constexpr double card_aspect_ratio = 0.714;  // Standard MTG card ratio (2.5/3.5)
+    constexpr double aspect_ratio_tolerance = 0.2;
+    constexpr double contour_approx_epsilon = 0.02;
+
+    // Image processing constants
+    constexpr int BLUR_RATIO = 100;  // Divisor for calculating blur kernel size
+    constexpr int DILATE_RATIO = 67; // Divisor for calculating dilation kernel size
+    constexpr double DILATE_ROUND = 0.5; // Rounding constant for dilation
+    constexpr int THRESH_RATIO = 20;  // Divisor for calculating threshold kernel size
+    constexpr int GAUSSIAN_KERNEL_SIZE = 5;  // Size for Gaussian blur kernel
+    constexpr int MAX_PIXEL_VALUE = 255;  // Maximum pixel value for thresholding
+    constexpr int THRESH_C_VALUE = 10;  // C value for adaptive threshold
 }
 
 namespace detail {
@@ -47,46 +56,50 @@ std::vector<cv::Point2f> sortCorners(const std::vector<cv::Point2f> &corners) {
     //   sorted[2], sorted[3] are the bottom two
     // We still need to check which is left vs. right.
 
+    cv::Point2f top_left;
+    cv::Point2f top_right;
+    cv::Point2f bottom_left;
+    cv::Point2f bottom_right;
+
     // The top-left should be sorted[0] if it has smaller x than sorted[1]
-    cv::Point2f topLeft, topRight, bottomLeft, bottomRight;
     if (sorted[0].x < sorted[1].x) {
-        topLeft = sorted[0];
-        topRight = sorted[1];
+        top_left = sorted[0];
+        top_right = sorted[1];
     } else {
-        topLeft = sorted[1];
-        topRight = sorted[0];
+        top_left = sorted[1];
+        top_right = sorted[0];
     }
 
     // The bottom-left should be sorted[2] if it has smaller x than sorted[3]
     if (sorted[2].x < sorted[3].x) {
-        bottomLeft = sorted[2];
-        bottomRight = sorted[3];
+        bottom_left = sorted[2];
+        bottom_right = sorted[3];
     } else {
-        bottomLeft = sorted[3];
-        bottomRight = sorted[2];
+        bottom_left = sorted[3];
+        bottom_right = sorted[2];
     }
 
     // Return in order: TL, TR, BR, BL
-    return {topLeft, topRight, bottomRight, bottomLeft};
+    return {top_left, top_right, bottom_right, bottom_left};
 }
 
 cv::Mat warpCard(const std::vector<cv::Point2f> &corners, const cv::Mat& undistortedImage) {
     // Ensure corners are in the correct order
     if (corners.size() != 4) {
-        return cv::Mat();
+        return {};
     }
 
     auto sorted = sortCorners(corners);
 
     // Destination corners for the normalized card
-    std::vector<cv::Point2f> dstPoints{
-        cv::Point2f(0.f, 0.f), 
-        cv::Point2f((float)normalizedWidth, 0.f),
-        cv::Point2f((float)normalizedWidth, (float)normalizedHeight),
-        cv::Point2f(0.f, (float)normalizedHeight)};
+    std::vector<cv::Point2f> dst_points{
+        cv::Point2f(0.0F, 0.0F), 
+        cv::Point2f(static_cast<float>(normalizedWidth), 0.0F),
+        cv::Point2f(static_cast<float>(normalizedWidth), static_cast<float>(normalizedHeight)),
+        cv::Point2f(0.0F, static_cast<float>(normalizedHeight))};
 
     // Compute perspective transform
-    cv::Mat transform = cv::getPerspectiveTransform(sorted, dstPoints);
+    cv::Mat transform = cv::getPerspectiveTransform(sorted, dst_points);
 
     // Warp the card
     cv::Mat warped;
@@ -99,10 +112,10 @@ bool detectCards(const cv::Mat& undistortedImage, std::vector<cv::Mat>& processe
     processed_cards.clear();
 
     // Calculate dynamic parameters based on image size
-    int minDim = std::min(undistortedImage.cols, undistortedImage.rows);
-    int blurRadius = ((minDim / 100 + 1) / 2) * 2 + 1;  // Round to nearest odd
-    int dilateRadius = static_cast<int>(std::floor(minDim / 67.0 + 0.5));
-    int threshRadius = ((minDim / 20 + 1) / 2) * 2 + 1; // Round to nearest odd
+    int min_dim = std::min(undistortedImage.cols, undistortedImage.rows);
+    int blur_radius = ((min_dim / BLUR_RATIO + 1) / 2) * 2 + 1;  // Round to nearest odd
+    int dilate_radius = static_cast<int>(std::floor(min_dim / DILATE_RATIO + DILATE_ROUND));
+    int thresh_radius = ((min_dim / THRESH_RATIO + 1) / 2) * 2 + 1; // Round to nearest odd
 
     // Convert to grayscale
     cv::Mat gray;
@@ -110,19 +123,19 @@ bool detectCards(const cv::Mat& undistortedImage, std::vector<cv::Mat>& processe
 
     // Apply median blur to better remove background textures
     cv::Mat blurred;
-    cv::medianBlur(gray, blurred, blurRadius);
+    cv::medianBlur(gray, blurred, blur_radius);
 
     // Apply Gaussian blur after median blur for better edge detection
-    cv::GaussianBlur(blurred, blurred, cv::Size(5, 5), 0);
+    cv::GaussianBlur(blurred, blurred, cv::Size(GAUSSIAN_KERNEL_SIZE, GAUSSIAN_KERNEL_SIZE), 0);
 
     // Apply adaptive threshold with adjusted parameters
     cv::Mat binary;
-    cv::adaptiveThreshold(blurred, binary, 255, cv::ADAPTIVE_THRESH_GAUSSIAN_C,
-                         cv::THRESH_BINARY_INV, threshRadius, 10);
+    cv::adaptiveThreshold(blurred, binary, MAX_PIXEL_VALUE, cv::ADAPTIVE_THRESH_GAUSSIAN_C,
+                         cv::THRESH_BINARY_INV, thresh_radius, THRESH_C_VALUE);
 
     // Create kernel for morphological operations
     cv::Mat kernel = cv::getStructuringElement(cv::MORPH_RECT, 
-                                             cv::Size(dilateRadius, dilateRadius));
+                                             cv::Size(dilate_radius, dilate_radius));
     
     // First dilate to connect edges
     cv::Mat morphed;
@@ -142,37 +155,38 @@ bool detectCards(const cv::Mat& undistortedImage, std::vector<cv::Mat>& processe
     }
 
     // Filter contours by area and aspect ratio
-    std::vector<std::vector<cv::Point>> validContours;
+    std::vector<std::vector<cv::Point>> valid_contours;
     for (const auto& contour : contours) {
         double area = cv::contourArea(contour);
-        cv::Rect boundRect = cv::boundingRect(contour);
-        double aspectRatio = static_cast<double>(boundRect.width) / boundRect.height;
+        cv::Rect bound_rect = cv::boundingRect(contour);
+        double aspect_ratio = static_cast<double>(bound_rect.width) / bound_rect.height;
         
-        if (area > MIN_CARD_AREA_RATIO * minDim * minDim && 
-            std::abs(aspectRatio - CARD_ASPECT_RATIO) < ASPECT_RATIO_TOLERANCE) {
-            validContours.push_back(contour);
+        if (area > min_card_area_ratio * min_dim * min_dim && 
+            std::abs(aspect_ratio - card_aspect_ratio) < aspect_ratio_tolerance) {
+            valid_contours.push_back(contour);
         }
     }
 
-    if (validContours.empty()) {
+    if (valid_contours.empty()) {
         return false;
     }
 
     // Find the contour with maximum area among valid contours
-    auto maxContour = std::max_element(validContours.begin(), validContours.end(),
+    auto max_contour = std::max_element(valid_contours.begin(), valid_contours.end(),
         [](const std::vector<cv::Point>& c1, const std::vector<cv::Point>& c2) {
             return cv::contourArea(c1) < cv::contourArea(c2);
         });
 
     // Approximate the contour to get corners
-    std::vector<cv::Point> approxCurve;
-    double epsilon = CONTOUR_APPROX_EPSILON * cv::arcLength(*maxContour, true);
-    cv::approxPolyDP(*maxContour, approxCurve, epsilon, true);
+    std::vector<cv::Point> approx_curve;
+    double epsilon = contour_approx_epsilon * cv::arcLength(*max_contour, true);
+    cv::approxPolyDP(*max_contour, approx_curve, epsilon, true);
 
     // Check if we have a valid quadrilateral
-    if (approxCurve.size() == 4 && cv::isContourConvex(approxCurve)) {
+    if (approx_curve.size() == 4 && cv::isContourConvex(approx_curve)) {
         std::vector<cv::Point2f> corners;
-        for (const auto& point : approxCurve) {
+        corners.reserve(approx_curve.size());  // Pre-allocate capacity
+        for (const auto& point : approx_curve) {
             corners.emplace_back(static_cast<float>(point.x), 
                                static_cast<float>(point.y));
         }
@@ -186,7 +200,7 @@ bool detectCards(const cv::Mat& undistortedImage, std::vector<cv::Mat>& processe
     }
 
     // Alternative: If approximation didn't work, try using the bounding rect
-    cv::RotatedRect bounding_box = cv::minAreaRect(*maxContour);
+    cv::RotatedRect bounding_box = cv::minAreaRect(*max_contour);
     std::array<cv::Point2f, 4> vertices;
     bounding_box.points(vertices.data());
     
