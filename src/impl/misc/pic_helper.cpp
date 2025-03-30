@@ -1,11 +1,13 @@
 #include <misc/pic_helper.hpp>
 #include <spdlog/spdlog.h>
+#include <libassert/assert.hpp>
 #include <opencv2/highgui.hpp>
 #include <chrono>
 #include <stdexcept>
 #include <iomanip>
 #include <sstream>
 #include <string>
+#include <system_error>
 
 namespace misc {
 
@@ -20,6 +22,13 @@ void displayResults(const cv::Mat& pic) {
 
 bool saveImage(const std::filesystem::path &savePath, const cv::Mat& pic, std::string name) {
     try {
+        // Create directories if they don't exist
+        std::error_code ec;
+        if (!std::filesystem::exists(savePath)) {
+            std::filesystem::create_directories(savePath, ec);
+            ASSERT(!ec, "Failed to create directory: {}", ec.message());
+        }
+
         // If no name is provided, generate one with timestamp
         if (name.empty()) {
             auto now = std::chrono::system_clock::now();
@@ -51,8 +60,8 @@ bool saveImage(const std::filesystem::path &savePath, const cv::Mat& pic, std::s
 
 void checkImage(const cv::Mat &pic, const std::string &operationName) {
     if (pic.empty()) {
-        throw std::runtime_error("Image is empty");
         spdlog::critical("Error in {}: Image is empty", operationName);
+        throw std::runtime_error("Image is empty");
     }
     if (pic.channels() != 3) {
         throw std::runtime_error("Image must have 3 channels (RGB)");
