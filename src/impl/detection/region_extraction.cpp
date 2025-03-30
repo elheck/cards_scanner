@@ -58,45 +58,34 @@ namespace {
     }
 }
 
-cv::Mat extractNameRegion(const cv::Mat& image) {
+cv::Rect extractNameRegion(const cv::Mat& image) {
     int x = static_cast<int>(image.cols * regions::name_left_margin);
     int y = static_cast<int>(image.rows * regions::name_top_margin);
     int width = static_cast<int>(image.cols * regions::name_width_ratio);
     int height = static_cast<int>(image.rows * regions::name_height_ratio);
 
-    cv::Rect name_region(x, y, width, height);
-    cv::Mat result = image.clone();
-    cv::rectangle(result, name_region, cv::Scalar(0, regions::max_color, 0), regions::rect_thickness);
-    return result;
+    return cv::Rect(x, y, width, height);
 }
 
-cv::Mat extractCollectorNumberRegionModern(const cv::Mat& image) {
+cv::Rect extractCollectorNumberRegionModern(const cv::Mat& image) {
     int x = static_cast<int>(image.cols * regions::collector_left_ratio);
     int y = static_cast<int>(image.rows * regions::collector_top_ratio);
     int width = static_cast<int>(image.cols * regions::collector_width_ratio);
     int height = static_cast<int>(image.rows * regions::collector_height_ratio);
 
-    cv::Rect collector_region(x, y, width, height);
-    cv::Mat result = image.clone();
-    cv::rectangle(result, collector_region, cv::Scalar(regions::max_color, 0, 0), regions::rect_thickness);
-    return result;
+    return cv::Rect(x, y, width, height);
 }
 
-cv::Mat extractSetNameRegionModern(const cv::Mat& image) {
+cv::Rect extractSetNameRegionModern(const cv::Mat& image) {
     int x = static_cast<int>(image.cols * regions::set_left_ratio);
     int y = static_cast<int>(image.rows * regions::set_top_ratio);
     int width = static_cast<int>(image.cols * regions::set_width_ratio);
     int height = static_cast<int>(image.rows * regions::set_height_ratio);
 
-    cv::Rect set_region(x, y, width, height);
-    cv::Mat result = image.clone();
-    cv::rectangle(result, set_region, cv::Scalar(0, 0, regions::max_color), regions::rect_thickness);
-    return result;
+    return cv::Rect(x, y, width, height);
 }
 
-cv::Mat extractArtRegionRegular(const cv::Mat& image) {
-    cv::Mat result = image.clone();
-
+cv::Rect extractArtRegionRegular(const cv::Mat& image) {
     // Convert to grayscale
     cv::Mat gray;
     cv::cvtColor(image, gray, cv::COLOR_BGR2GRAY);
@@ -148,24 +137,22 @@ cv::Mat extractArtRegionRegular(const cv::Mat& image) {
         }
     }
 
-    // Draw the best contour if found
+    // Return the bounding box of the best contour if found
     if (!best_contour.empty()) {
-        cv::polylines(result, best_contour, true, cv::Scalar(0, 255, 0), 2);
+        return cv::boundingRect(best_contour);
     }
 
-    return result;
+    // Return an empty rectangle if no valid contour is found
+    return cv::Rect();
 }
 
-cv::Mat extractTextRegion(const cv::Mat& image) {
+cv::Rect extractTextRegion(const cv::Mat& image) {
     int x = static_cast<int>(image.cols * regions::text_left_ratio);
     int y = static_cast<int>(image.rows * regions::text_top_ratio);
     int width = static_cast<int>(image.cols * regions::text_width_ratio);
     int height = static_cast<int>(image.rows * regions::text_height_ratio);
 
-    cv::Rect text_region(x, y, width, height);
-    cv::Mat result = image.clone();
-    cv::rectangle(result, text_region, cv::Scalar(0, regions::max_color, regions::max_color), regions::rect_thickness);
-    return result;
+    return cv::Rect(x, y, width, height);
 }
 
 } // namespace detect

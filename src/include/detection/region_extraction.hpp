@@ -3,11 +3,11 @@
 
 namespace detect
 {
-    // Extract regions from a card image returning the image with drawn regions
-    [[nodiscard]] cv::Mat extractNameRegion(const cv::Mat& image);
-    [[nodiscard]] cv::Mat extractCollectorNumberRegionModern(const cv::Mat& image);
-    [[nodiscard]] cv::Mat extractSetNameRegionModern(const cv::Mat& image);
-    [[nodiscard]] cv::Mat extractArtRegionRegular(const cv::Mat& image);
-    [[nodiscard]] cv::Mat extractTextRegion(const cv::Mat& image);
+    // Extract regions from a card image returning the bounding box of each region
+    [[nodiscard]] cv::Rect extractNameRegion(const cv::Mat& image);
+    [[nodiscard]] cv::Rect extractCollectorNumberRegionModern(const cv::Mat& image);
+    [[nodiscard]] cv::Rect extractSetNameRegionModern(const cv::Mat& image);
+    [[nodiscard]] cv::Rect extractArtRegionRegular(const cv::Mat& image);
+    [[nodiscard]] cv::Rect extractTextRegion(const cv::Mat& image);
 
 } // namespace detect
