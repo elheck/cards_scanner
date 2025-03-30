@@ -44,12 +44,15 @@ jobs:
 
     - name: Run clang-tidy
       run: |
-        find src -name '*.cpp' -o -name '*.h' | while read -r file; do
+        set -e
+        exit_code=0
+        while IFS= read -r file; do
           if ! clang-tidy -p build/ "$file"; then
-            echo "clang-tidy failed for $file"
-            exit 1
+            echo "❌ clang-tidy failed for $file"
+            exit_code=1
           fi
-        done
+        done < <(find src -name '*.cpp' -o -name '*.h')
+        exit $exit_code
 
     - name: Build
       working-directory: build
