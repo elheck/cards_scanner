@@ -25,5 +25,5 @@ add to path
 new profile detect
 
 
-# Notes for HW built
+# Notes for HW build
 - We want most likely Off-axis bright field lighting with an 18-20 degree tilt in the light to rmeove hot spots
