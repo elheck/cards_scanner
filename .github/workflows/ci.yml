@@ -16,12 +16,12 @@ jobs:
     - name: Set up Python
       uses: actions/setup-python@v4
       with:
-        python-version: '3.x'
+        python-version: '3.11'
 
     - name: Install Conan
       run: |
         python -m pip install --upgrade pip
-        pip install conan==1.60.1
+        pip install conan>=2.0.0
         conan --version
 
     - name: Install system dependencies
@@ -33,23 +33,18 @@ jobs:
 
     - name: Configure Conan
       run: |
-        conan profile new default --detect
-        conan profile update settings.compiler.libcxx=libstdc++11 default
+        conan profile detect --force
 
-    - name: Install Conan dependencies
+    - name: Configure CMake
       run: |
         mkdir -p build
         cd build
-        conan install .. --build=missing
-
-    - name: Configure CMake
-      working-directory: build
-      run: cmake .. -DCMAKE_BUILD_TYPE=Release
-
+        cmake ..
+        
     - name: Build
       working-directory: build
-      run: cmake --build .
+      run: cmake --build . --verbose
 
     - name: Run tests
       working-directory: build
-      run: ctest --output-on-failure -V
+      run: ctest -V
