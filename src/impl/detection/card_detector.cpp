@@ -14,13 +14,13 @@ namespace {
     constexpr double contour_approx_epsilon = 0.02;
 
     // Image processing constants
-    constexpr int BLUR_RATIO = 100;  // Divisor for calculating blur kernel size
-    constexpr int DILATE_RATIO = 67; // Divisor for calculating dilation kernel size
-    constexpr double DILATE_ROUND = 0.5; // Rounding constant for dilation
-    constexpr int THRESH_RATIO = 20;  // Divisor for calculating threshold kernel size
-    constexpr int GAUSSIAN_KERNEL_SIZE = 5;  // Size for Gaussian blur kernel
-    constexpr int MAX_PIXEL_VALUE = 255;  // Maximum pixel value for thresholding
-    constexpr int THRESH_C_VALUE = 10;  // C value for adaptive threshold
+    constexpr int blur_ratio = 100;  // Divisor for calculating blur kernel size
+    constexpr int dilate_ratio = 67; // Divisor for calculating dilation kernel size
+    constexpr double dilate_round = 0.5; // Rounding constant for dilation
+    constexpr int thresh_ratio = 20;  // Divisor for calculating threshold kernel size
+    constexpr int gaussian_kernel_size = 5;  // Size for Gaussian blur kernel
+    constexpr int max_pixel_value = 255;  // Maximum pixel value for thresholding
+    constexpr int thresh_c_value = 10;  // C value for adaptive threshold
 }
 
 namespace detail {
@@ -113,9 +113,9 @@ bool detectCards(const cv::Mat& undistortedImage, std::vector<cv::Mat>& processe
 
     // Calculate dynamic parameters based on image size
     int min_dim = std::min(undistortedImage.cols, undistortedImage.rows);
-    int blur_radius = ((min_dim / BLUR_RATIO + 1) / 2) * 2 + 1;  // Round to nearest odd
-    int dilate_radius = static_cast<int>(std::floor(min_dim / DILATE_RATIO + DILATE_ROUND));
-    int thresh_radius = ((min_dim / THRESH_RATIO + 1) / 2) * 2 + 1; // Round to nearest odd
+    int blur_radius = ((min_dim / blur_ratio + 1) / 2) * 2 + 1;  // Round to nearest odd
+    int dilate_radius = static_cast<int>(std::floor(static_cast<double>(min_dim) / dilate_ratio + dilate_round));
+    int thresh_radius = ((min_dim / thresh_ratio + 1) / 2) * 2 + 1; // Round to nearest odd
 
     // Convert to grayscale
     cv::Mat gray;
@@ -126,12 +126,12 @@ bool detectCards(const cv::Mat& undistortedImage, std::vector<cv::Mat>& processe
     cv::medianBlur(gray, blurred, blur_radius);
 
     // Apply Gaussian blur after median blur for better edge detection
-    cv::GaussianBlur(blurred, blurred, cv::Size(GAUSSIAN_KERNEL_SIZE, GAUSSIAN_KERNEL_SIZE), 0);
+    cv::GaussianBlur(blurred, blurred, cv::Size(gaussian_kernel_size, gaussian_kernel_size), 0);
 
     // Apply adaptive threshold with adjusted parameters
     cv::Mat binary;
-    cv::adaptiveThreshold(blurred, binary, MAX_PIXEL_VALUE, cv::ADAPTIVE_THRESH_GAUSSIAN_C,
-                         cv::THRESH_BINARY_INV, thresh_radius, THRESH_C_VALUE);
+    cv::adaptiveThreshold(blurred, binary, max_pixel_value, cv::ADAPTIVE_THRESH_GAUSSIAN_C,
+                         cv::THRESH_BINARY_INV, thresh_radius, thresh_c_value);
 
     // Create kernel for morphological operations
     cv::Mat kernel = cv::getStructuringElement(cv::MORPH_RECT, 
