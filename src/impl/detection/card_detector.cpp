@@ -1,5 +1,5 @@
 #include <detection/card_detector.hpp>
-#include <iostream>
+#include <spdlog/spdlog.h>
 #include <stdexcept>
 #include <cmath>
 
@@ -10,7 +10,7 @@ namespace detail {
 bool loadImage(const std::filesystem::path &imagePath, cv::Mat& originalImage, cv::Mat& undistortedImage) {
     originalImage = cv::imread(imagePath.string());
     if (originalImage.empty()) {
-        std::cerr << "Failed to load image: " << imagePath << std::endl;
+        spdlog::error("Failed to load image: {}", imagePath.string());
         return false;
     }
 

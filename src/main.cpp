@@ -9,11 +9,10 @@
 #include <string>
 
 void printUsage(const char *programName) {
-    std::cout << "Usage: " << programName << " [options]" << std::endl;
-    std::cout << "Options:" << std::endl;
-    std::cout << "  -f, --file <path>    Process a card from an image file"
-              << std::endl;
-    std::cout << "  -h, --help           Show this help message" << std::endl;
+    spdlog::info("Usage: {} [options]", programName);
+    spdlog::info("Options:");
+    spdlog::info("  -f, --file <path>    Process a card from an image file");
+    spdlog::info("  -h, --help           Show this help message");
 }
 
 int main(int argc, char *argv[]) {
