@@ -26,7 +26,10 @@ cv::Mat DetectionBuilder::processModernNormal(const std::filesystem::path& image
     
     // Extract regions in order
     auto card_with_name = detect::extractNameRegion(card);
+    auto card_with_colnr = detect::extractCollectorNumberRegionModern(card_with_name);
+    auto card_with_setname = detect::extractSetNameRegionModern(card_with_colnr);
+    auto card_with_only_art = detect::extractArtRegionRegular(card);
     
-    return card_with_name;
+    return card_with_only_art;
 }
 } // namespace workflow
