@@ -2,6 +2,7 @@
 #include <spdlog/spdlog.h>
 #include <stdexcept>
 #include <cmath>
+#include <array>
 
 namespace detect {
 
@@ -185,13 +186,14 @@ bool detectCards(const cv::Mat& undistortedImage, std::vector<cv::Mat>& processe
     }
 
     // Alternative: If approximation didn't work, try using the bounding rect
-    cv::RotatedRect boundingBox = cv::minAreaRect(*maxContour);
-    cv::Point2f vertices[4];
-    boundingBox.points(vertices);
+    cv::RotatedRect bounding_box = cv::minAreaRect(*maxContour);
+    std::array<cv::Point2f, 4> vertices;
+    bounding_box.points(vertices.data());
     
     std::vector<cv::Point2f> corners;
-    for (int i = 0; i < 4; ++i) {
-        corners.push_back(vertices[i]);
+    corners.reserve(4);  // Pre-allocate capacity
+    for (const auto& vertex : vertices) {
+        corners.push_back(vertex);
     }
 
     cv::Mat warped = warpCard(corners, undistortedImage);
@@ -206,22 +208,23 @@ bool detectCards(const cv::Mat& undistortedImage, std::vector<cv::Mat>& processe
 } // namespace detail
 
 cv::Mat processCards(const std::filesystem::path& imagePath) {
-    cv::Mat originalImage, undistortedImage;
+    cv::Mat original_image;
+    cv::Mat undistorted_image;
     std::vector<cv::Mat> processed_cards;
 
-    if (!detail::loadImage(imagePath, originalImage, undistortedImage)) {
+    if (!detail::loadImage(imagePath, original_image, undistorted_image)) {
         throw std::runtime_error("Failed to load image");
     }
 
-    if (undistortedImage.empty()) {
+    if (undistorted_image.empty()) {
         throw std::runtime_error("no cards");
     }
 
     // Step 1: Undistort the image if you have calibration (no-op here)
-    detail::undistortImage(undistortedImage);
+    detail::undistortImage(undistorted_image);
 
     // Step 2: Detect all cards
-    if (!detail::detectCards(undistortedImage, processed_cards)) {
+    if (!detail::detectCards(undistorted_image, processed_cards)) {
         throw std::runtime_error("no cards detected");
     }
 

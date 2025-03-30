@@ -18,7 +18,7 @@ void printUsage(std::string_view programName) {
 
 int main(int argc, char *argv[]) {
     const gsl::span args{argv, static_cast<std::size_t>(argc)};
-    std::filesystem::path imagePath;
+    std::filesystem::path image_path;
     
     ASSERT(args.size() > 1, "No arguments given", args.size());
 
@@ -37,7 +37,7 @@ int main(int argc, char *argv[]) {
                 printUsage(args[0]);
                 return 1;
             }
-            imagePath = args[++i];
+            image_path = args[++i];
             continue;
         }
 
@@ -47,7 +47,7 @@ int main(int argc, char *argv[]) {
     }
 
     // Check if image path is provided
-    if (imagePath.empty()) {
+    if (image_path.empty()) {
         spdlog::warn("Error: No input file specified");
         printUsage(args[0]);
         return 1;
@@ -58,7 +58,7 @@ int main(int argc, char *argv[]) {
         workflow::DetectionBuilder builder(workflow::CardType::modernNormal);
         
         // Process the card using the builder
-        auto processed_card = builder.process(imagePath);
+        auto processed_card = builder.process(image_path);
 
         if(!misc::saveImage(misc::getTestSamplesPath(), processed_card, "test_out.jpg")){
             spdlog::critical("Error: Failed to save image");

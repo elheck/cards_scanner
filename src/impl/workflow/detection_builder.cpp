@@ -1,4 +1,7 @@
 #include <workflow/detection_builder.hpp>
+#include <detection/card_detector.hpp>
+#include <detection/region_extraction.hpp>
+#include <detection/tilt_corrector.hpp>
 #include <stdexcept>
 
 namespace workflow {
@@ -23,7 +26,6 @@ cv::Mat DetectionBuilder::processModernNormal(const std::filesystem::path& image
     
     // Extract regions in order
     auto card_with_name = detect::extractNameRegion(card);
-
     
     return card_with_name;
 }

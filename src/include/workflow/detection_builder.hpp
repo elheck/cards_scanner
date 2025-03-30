@@ -22,6 +22,6 @@ public:
 
 private:
     CardType type_;
-    cv::Mat processModernNormal(const std::filesystem::path& imagePath);
+    static cv::Mat processModernNormal(const std::filesystem::path& imagePath);
 };
 }
