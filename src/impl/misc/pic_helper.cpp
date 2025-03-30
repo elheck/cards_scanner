@@ -1,4 +1,3 @@
-
 #include <misc/pic_helper.hpp>
 
 #include <spdlog/spdlog.h>
@@ -9,7 +8,7 @@
 #include <sstream>
 #include <string>
 
-namespace cs {
+namespace misc {
 
 void displayResults(cv::Mat pic) {
   cv::imshow("Card", pic);
@@ -60,4 +59,4 @@ void checkImage(const cv::Mat &pic, const std::string &operationName) {
     }
 }
 
-} // namespace cs
+} // namespace misc

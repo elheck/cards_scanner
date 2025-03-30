@@ -4,7 +4,7 @@
 
 #include <filesystem> 
 
-namespace cs {
+namespace misc {
 // Show the detected & warped cards (for debugging)
 void displayResults(cv::Mat pic);
 
@@ -13,4 +13,4 @@ void displayResults(cv::Mat pic);
 
 // Check if the image is valid (non-empty and 3 channels)
 void checkImage(const cv::Mat &pic, const std::string &operationName);
-} // namespace cs
+} // namespace misc

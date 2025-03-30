@@ -5,57 +5,99 @@
 
 namespace detect {
 
-bool CardDetector::loadImage(const std::filesystem::path &imagePath) {
-  originalImage_ = cv::imread(imagePath.string());
-  if (originalImage_.empty()) {
-    std::cerr << "Failed to load image: " << imagePath << std::endl;
-    return false;
-  }
+namespace detail {
 
-  // Make a copy for processing
-  undistortedImage_ = originalImage_.clone();
-  return true;
+bool loadImage(const std::filesystem::path &imagePath, cv::Mat& originalImage, cv::Mat& undistortedImage) {
+    originalImage = cv::imread(imagePath.string());
+    if (originalImage.empty()) {
+        std::cerr << "Failed to load image: " << imagePath << std::endl;
+        return false;
+    }
+
+    // Make a copy for processing
+    undistortedImage = originalImage.clone();
+    return true;
 }
 
-cv::Mat CardDetector::processCards() {
-  if (undistortedImage_.empty()) {
-    throw std::runtime_error("no cards");
-  }
-
-  // Step 1: Undistort the image if you have calibration (no-op here)
-  undistortImage();
-
-  // Step 2: Detect all cards
-  if (!detectCards()) {
-    throw std::runtime_error("no cards detected");
-  }
-
-  if (processedCards_.empty()) {
-    throw std::runtime_error("Not one card found");
-  }
-
-  // If we found at least one card, we're good
-  return processedCards_.at(0);
+void undistortImage(cv::Mat& undistortedImage) {
+    // In a real application, apply camera calibration here.
+    // For now, we'll just keep the original image.
 }
 
-void CardDetector::undistortImage() {
-  // In a real application, apply camera calibration here.
-  // For now, we’ll just keep the original image.
-  // undistortedImage_ = originalImage_.clone();
+std::vector<cv::Point2f> sortCorners(const std::vector<cv::Point2f> &corners) {
+    // We assume exactly 4 corners.
+    // 1) Sort by y, then x
+    std::vector<cv::Point2f> sorted = corners;
+    std::sort(sorted.begin(), sorted.end(),
+            [](const cv::Point2f &a, const cv::Point2f &b) {
+                return (a.y < b.y) || (a.y == b.y && a.x < b.x);
+            });
+
+    // After this sort:
+    //   sorted[0], sorted[1] are the top two (by y)
+    //   sorted[2], sorted[3] are the bottom two
+    // We still need to check which is left vs. right.
+
+    // The top-left should be sorted[0] if it has smaller x than sorted[1]
+    cv::Point2f topLeft, topRight, bottomLeft, bottomRight;
+    if (sorted[0].x < sorted[1].x) {
+        topLeft = sorted[0];
+        topRight = sorted[1];
+    } else {
+        topLeft = sorted[1];
+        topRight = sorted[0];
+    }
+
+    // The bottom-left should be sorted[2] if it has smaller x than sorted[3]
+    if (sorted[2].x < sorted[3].x) {
+        bottomLeft = sorted[2];
+        bottomRight = sorted[3];
+    } else {
+        bottomLeft = sorted[3];
+        bottomRight = sorted[2];
+    }
+
+    // Return in order: TL, TR, BR, BL
+    return {topLeft, topRight, bottomRight, bottomLeft};
 }
 
-bool CardDetector::detectCards() {
-    processedCards_.clear();
+cv::Mat warpCard(const std::vector<cv::Point2f> &corners, const cv::Mat& undistortedImage) {
+    // Ensure corners are in the correct order
+    if (corners.size() != 4) {
+        return cv::Mat();
+    }
+
+    auto sorted = sortCorners(corners);
+
+    // Destination corners for the normalized card
+    std::vector<cv::Point2f> dstPoints{
+        cv::Point2f(0.f, 0.f), 
+        cv::Point2f((float)normalizedWidth, 0.f),
+        cv::Point2f((float)normalizedWidth, (float)normalizedHeight),
+        cv::Point2f(0.f, (float)normalizedHeight)};
+
+    // Compute perspective transform
+    cv::Mat transform = cv::getPerspectiveTransform(sorted, dstPoints);
+
+    // Warp the card
+    cv::Mat warped;
+    cv::warpPerspective(undistortedImage, warped, transform,
+                        cv::Size(normalizedWidth, normalizedHeight));
+    return warped;
+}
+
+bool detectCards(const cv::Mat& undistortedImage, std::vector<cv::Mat>& processedCards) {
+    processedCards.clear();
 
     // Calculate dynamic parameters based on image size
-    int minDim = std::min(undistortedImage_.cols, undistortedImage_.rows);
+    int minDim = std::min(undistortedImage.cols, undistortedImage.rows);
     int blurRadius = ((minDim / 100 + 1) / 2) * 2 + 1;  // Round to nearest odd
     int dilateRadius = static_cast<int>(std::floor(minDim / 67.0 + 0.5));
     int threshRadius = ((minDim / 20 + 1) / 2) * 2 + 1; // Round to nearest odd
 
     // Convert to grayscale
     cv::Mat gray;
-    cv::cvtColor(undistortedImage_, gray, cv::COLOR_BGR2GRAY);
+    cv::cvtColor(undistortedImage, gray, cv::COLOR_BGR2GRAY);
 
     // Apply median blur to better remove background textures
     cv::Mat blurred;
@@ -132,9 +174,9 @@ bool CardDetector::detectCards() {
         }
 
         // Sort corners and warp the card
-        cv::Mat warped = warpCard(corners);
+        cv::Mat warped = warpCard(corners, undistortedImage);
         if (!warped.empty()) {
-            processedCards_.push_back(warped);
+            processedCards.push_back(warped);
             return true;
         }
     }
@@ -149,76 +191,43 @@ bool CardDetector::detectCards() {
         corners.push_back(vertices[i]);
     }
 
-    cv::Mat warped = warpCard(corners);
+    cv::Mat warped = warpCard(corners, undistortedImage);
     if (!warped.empty()) {
-        processedCards_.push_back(warped);
+        processedCards.push_back(warped);
         return true;
     }
 
     return false;
 }
 
-std::vector<cv::Point2f>
-CardDetector::sortCorners(const std::vector<cv::Point2f> &corners) {
-  // We assume exactly 4 corners.
-  // 1) Sort by y, then x
-  std::vector<cv::Point2f> sorted = corners;
-  std::sort(sorted.begin(), sorted.end(),
-            [](const cv::Point2f &a, const cv::Point2f &b) {
-              return (a.y < b.y) || (a.y == b.y && a.x < b.x);
-            });
+} // namespace detail
 
-  // After this sort:
-  //   sorted[0], sorted[1] are the top two (by y)
-  //   sorted[2], sorted[3] are the bottom two
-  // We still need to check which is left vs. right.
+cv::Mat processCards(const std::filesystem::path& imagePath) {
+    cv::Mat originalImage, undistortedImage;
+    std::vector<cv::Mat> processedCards;
 
-  // The top-left should be sorted[0] if it has smaller x than sorted[1]
-  cv::Point2f topLeft, topRight, bottomLeft, bottomRight;
-  if (sorted[0].x < sorted[1].x) {
-    topLeft = sorted[0];
-    topRight = sorted[1];
-  } else {
-    topLeft = sorted[1];
-    topRight = sorted[0];
-  }
+    if (!detail::loadImage(imagePath, originalImage, undistortedImage)) {
+        throw std::runtime_error("Failed to load image");
+    }
 
-  // The bottom-left should be sorted[2] if it has smaller x than sorted[3]
-  if (sorted[2].x < sorted[3].x) {
-    bottomLeft = sorted[2];
-    bottomRight = sorted[3];
-  } else {
-    bottomLeft = sorted[3];
-    bottomRight = sorted[2];
-  }
+    if (undistortedImage.empty()) {
+        throw std::runtime_error("no cards");
+    }
 
-  // Return in order: TL, TR, BR, BL
-  std::vector<cv::Point2f> dst{topLeft, topRight, bottomRight, bottomLeft};
-  return dst;
-}
+    // Step 1: Undistort the image if you have calibration (no-op here)
+    detail::undistortImage(undistortedImage);
 
-cv::Mat CardDetector::warpCard(const std::vector<cv::Point2f> &corners) {
-  // Ensure corners are in the correct order
-  if (corners.size() != 4) {
-    return cv::Mat();
-  }
+    // Step 2: Detect all cards
+    if (!detail::detectCards(undistortedImage, processedCards)) {
+        throw std::runtime_error("no cards detected");
+    }
 
-  auto sorted = sortCorners(corners);
+    if (processedCards.empty()) {
+        throw std::runtime_error("Not one card found");
+    }
 
-  // Destination corners for the normalized card
-  std::vector<cv::Point2f> dstPoints{
-      cv::Point2f(0.f, 0.f), cv::Point2f((float)normalizedWidth_, 0.f),
-      cv::Point2f((float)normalizedWidth_, (float)normalizedHeight_),
-      cv::Point2f(0.f, (float)normalizedHeight_)};
-
-  // Compute perspective transform
-  cv::Mat transform = cv::getPerspectiveTransform(sorted, dstPoints);
-
-  // Warp the card
-  cv::Mat warped;
-  cv::warpPerspective(undistortedImage_, warped, transform,
-                      cv::Size(normalizedWidth_, normalizedHeight_));
-  return warped;
+    // If we found at least one card, we're good
+    return processedCards.at(0);
 }
 
 } // namespace detect

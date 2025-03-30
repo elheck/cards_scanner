@@ -9,7 +9,6 @@ add_executable(test_card_detection
     test_card_detection.cpp
 )
 
-target_compile_definitions(test_card_detection PUBLIC "SAMPLE_DATA_FOLDER=\"${CMAKE_SOURCE_DIR}/tests/sample_cards\"")
 
 # Include directories for the test
 target_include_directories(test_card_detection PRIVATE

@@ -12,6 +12,9 @@ project(card_scanner
     DESCRIPTION "MTG Card Scanner with OpenCV"
 )
 
+add_compile_definitions("SAMPLE_DATA_FOLDER=\"${CMAKE_SOURCE_DIR}/tests/sample_cards\"")
+
+
 # Set C++ standard
 set(CMAKE_CXX_STANDARD 17)
 set(CMAKE_CXX_STANDARD_REQUIRED ON)

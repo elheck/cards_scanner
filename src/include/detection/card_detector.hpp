@@ -6,34 +6,20 @@
 
 namespace detect {
 
-class CardDetector {
-public:
-  // Load the original image
-  [[nodiscard]] bool loadImage(const std::filesystem::path &imagePath);
+// Process a card from an image file - this is the only public interface
+[[nodiscard]] cv::Mat processCards(const std::filesystem::path& imagePath);
 
-  // Process *all* cards found in the image
-  [[nodiscard]] cv::Mat processCards();
+namespace detail {
+    // Internal helper functions
+    [[nodiscard]] bool loadImage(const std::filesystem::path& imagePath, cv::Mat& originalImage, cv::Mat& undistortedImage);
+    void undistortImage(cv::Mat& undistortedImage);
+    [[nodiscard]] bool detectCards(const cv::Mat& undistortedImage, std::vector<cv::Mat>& processedCards);
+    [[nodiscard]] cv::Mat warpCard(const std::vector<cv::Point2f>& corners, const cv::Mat& undistortedImage);
+    [[nodiscard]] std::vector<cv::Point2f> sortCorners(const std::vector<cv::Point2f>& corners);
 
-private:
-  // Internal helpers
-  void undistortImage(); // no-op unless you have camera calibration
-  [[nodiscard]] bool detectCards();    // find all quadrilaterals that could be cards
-  [[nodiscard]] cv::Mat warpCard(const std::vector<cv::Point2f> &corners);
-
-  // Helper to reorder corners: top-left, top-right, bottom-right, bottom-left
-  [[nodiscard]] std::vector<cv::Point2f> sortCorners(const std::vector<cv::Point2f> &corners);
-
-private:
-  // Input images
-  cv::Mat originalImage_;
-  cv::Mat undistortedImage_;
-
-  // Output for each detected card
-  std::vector<cv::Mat> processedCards_;
-
-  // Desired card size after perspective transform
-  static constexpr int normalizedWidth_ = 480;
-  static constexpr int normalizedHeight_ = 680;
-};
+    // Normalized card dimensions
+    constexpr int normalizedWidth = 480;
+    constexpr int normalizedHeight = 680;
+}
 
 } // namespace detect

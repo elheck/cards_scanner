@@ -1,9 +1,7 @@
-
 # Find the Conan-installed packages
 find_package(OpenCV REQUIRED)
 find_package(spdlog REQUIRED)
 find_package(libassert REQUIRED)
-
 
 # Define the core library
 add_library(card_processor_lib
@@ -11,6 +9,7 @@ add_library(card_processor_lib
     impl/detection/tilt_corrector.cpp
     impl/detection/region_extraction.cpp
     impl/misc/pic_helper.cpp
+    impl/misc/path_helper.cpp
 )
 
 # Include directories for the core library
