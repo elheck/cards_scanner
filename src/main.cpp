@@ -1,6 +1,4 @@
-#include <detection/card_detector.hpp>
-#include <detection/tilt_corrector.hpp>
-#include <detection/region_extraction.hpp>
+#include <workflow/detection_builder.hpp>
 #include <misc/pic_helper.hpp>
 #include <misc/path_helper.hpp>
 
@@ -51,18 +49,13 @@ int main(int argc, char *argv[]) {
     }
 
     try {
-        // Process the card
-        auto processed_card = detect::processCards(imagePath);
-        misc::checkImage(processed_card, "Card detection");
+        // Create a detection builder for modern normal cards
+        workflow::DetectionBuilder builder(workflow::CardType::modernNormal);
         
-        // Correct tilt
-        processed_card = detect::correctCardTilt(processed_card);
-        misc::checkImage(processed_card, "Tilt correction");
+        // Process the card using the builder
+        auto processed_card = builder.process(imagePath);
 
-        auto region = detect::extractNameRegion(processed_card);
-        misc::checkImage(region, "Region extraction");
-
-        if(!misc::saveImage(misc::getTestSamplesPath(), region, "test_out.jpg")){
+        if(!misc::saveImage(misc::getTestSamplesPath(), processed_card, "test_out.jpg")){
             spdlog::critical("Error: Failed to save image");
             return 1;
         }
