@@ -10,7 +10,7 @@ Checks: '
   -modernize-use-trailing-return-type,
   -readability-identifier-length
 '
-WarningsAsErrors: ''
+WarningsAsErrors: '*'
 FormatStyle: file
 CheckOptions:
   - key: readability-identifier-naming.ClassCase
