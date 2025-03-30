@@ -1,3 +1,5 @@
+cmake_minimum_required(VERSION 3.18)
+
 # Find required packages if not already found
 if(NOT TARGET GTest::gtest)
     find_package(GTest REQUIRED)
@@ -7,8 +9,8 @@ find_package(OpenCV REQUIRED)
 # Define the integration test executable
 add_executable(test_card_detection
     test_card_detection.cpp
+    test_detection_builder.cpp
 )
-
 
 # Include directories for the test
 target_include_directories(test_card_detection PRIVATE
@@ -16,9 +18,10 @@ target_include_directories(test_card_detection PRIVATE
     ${OpenCV_INCLUDE_DIRS}
 )
 
-# Link the test with the card_processor library and testing framework
+# Link the test with required libraries
 target_link_libraries(test_card_detection PRIVATE
     card_processor_lib
+    workflow_lib
     GTest::gtest
     GTest::gtest_main
 )
