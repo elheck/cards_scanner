@@ -30,6 +30,7 @@ jobs:
         sudo apt-get install -y cmake build-essential
         sudo apt-get install -y libopencv-dev python3-opencv
         sudo apt-get install -y libgtest-dev
+        sudo apt-get install -y clang-tidy
 
     - name: Configure Conan
       run: |
@@ -39,11 +40,15 @@ jobs:
       run: |
         mkdir -p build
         cd build
-        cmake ..
-        
+        cmake -DCMAKE_EXPORT_COMPILE_COMMANDS=ON ..
+
+    - name: Run clang-tidy
+      run: |
+        find src -name '*.cpp' -o -name '*.h' | xargs clang-tidy -p build/
+
     - name: Build
       working-directory: build
-      run: cmake --build . --verbose
+      run: cmake --build .
 
     - name: Run tests
       working-directory: build
