@@ -29,19 +29,21 @@ int main(int argc, char *argv[]) {
         if (arg == "-h" || arg == "--help") {
             printUsage(args[0]);
             return 0;
-        } else if (arg == "-f" || arg == "--file") {
-            if (i + 1 < args.size()) {
-                imagePath = args[++i];
-            } else {
+        }
+        
+        if (arg == "-f" || arg == "--file") {
+            if (i + 1 >= args.size()) {
                 spdlog::critical("Error: Missing file path");
                 printUsage(args[0]);
                 return 1;
             }
-        } else {
-            spdlog::critical("Error: Unknown option: {}", arg);
-            printUsage(args[0]);
-            return 1;
+            imagePath = args[++i];
+            continue;
         }
+
+        spdlog::critical("Error: Unknown option: {}", arg);
+        printUsage(args[0]);
+        return 1;
     }
 
     // Check if image path is provided

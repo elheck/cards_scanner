@@ -46,19 +46,12 @@ jobs:
       run: |
         set -e
         exit_code=0
-        files_with_errors=""
         while IFS= read -r file; do
-          echo "Checking $file..."
-          if ! clang-tidy -warnings-as-errors=* -p build/ "$file" > clang_tidy_output.txt 2>&1; then
+          if ! clang-tidy -warnings-as-errors=* -p build/ "$file"; then
             echo "❌ clang-tidy failed for $file"
-            cat clang_tidy_output.txt
-            files_with_errors="$files_with_errors\n$file"
             exit_code=1
           fi
         done < <(find src -name '*.cpp' -o -name '*.h')
-        if [ $exit_code -ne 0 ]; then
-          echo -e "\n❌ Files with clang-tidy errors:$files_with_errors"
-        fi
         exit $exit_code
 
     - name: Build

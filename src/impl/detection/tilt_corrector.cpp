@@ -2,16 +2,19 @@
 #include <opencv2/opencv.hpp>
 #include <opencv2/imgproc.hpp>
 #include <opencv2/highgui.hpp>
+#include <gsl/narrow>
 #include <cmath>
 
 namespace detect {
 
 namespace {
     // Image processing parameters
-    constexpr int GAUSSIAN_KERNEL_SIZE = 5;
-    constexpr double CANNY_THRESHOLD_LOW = 50.0;
-    constexpr double CANNY_THRESHOLD_HIGH = 150.0;
-    constexpr int GAUSSIAN_SIGMA = 0;  // 0 means auto-compute
+    constexpr int gaussian_kernel_size = 5;
+    constexpr double canny_threshold_low = 50.0;
+    constexpr double canny_threshold_high = 150.0;
+    constexpr int gaussian_sigma = 0;  // 0 means auto-compute
+    constexpr double center_divisor = 2.0;  // Used to find image center
+    constexpr double ninety_degrees = 90.0; // Rotation adjustment for portrait orientation
 }
 
 cv::Mat correctCardTilt(const cv::Mat &cardImage) {
@@ -22,51 +25,54 @@ cv::Mat correctCardTilt(const cv::Mat &cardImage) {
     // Step 2: Apply GaussianBlur to reduce noise
     cv::Mat blurred;
     cv::GaussianBlur(gray, blurred, 
-                     cv::Size(GAUSSIAN_KERNEL_SIZE, GAUSSIAN_KERNEL_SIZE),
-                     GAUSSIAN_SIGMA);
+                     cv::Size(gaussian_kernel_size, gaussian_kernel_size),
+                     gaussian_sigma);
 
     // Step 3: Use edge detection (Canny)
     cv::Mat edges;
-    cv::Canny(blurred, edges, CANNY_THRESHOLD_LOW, CANNY_THRESHOLD_HIGH);
+    cv::Canny(blurred, edges, canny_threshold_low, canny_threshold_high);
 
     // Step 4: Find contours
     std::vector<std::vector<cv::Point>> contours;
     cv::findContours(edges, contours, cv::RETR_EXTERNAL, cv::CHAIN_APPROX_SIMPLE);
 
     // Step 5: Find the largest contour (assuming it's the card)
-    double maxArea = 0.0;
-    std::vector<cv::Point> largestContour;
+    double max_area = 0.0;
+    std::vector<cv::Point> largest_contour;
     for (const auto &contour : contours) {
         double area = cv::contourArea(contour);
-        if (area > maxArea) {
-            maxArea = area;
-            largestContour = contour;
+        if (area > max_area) {
+            max_area = area;
+            largest_contour = contour;
         }
     }
 
-    if (largestContour.empty()) {
+    if (largest_contour.empty()) {
         // No significant contour detected
         return cardImage.clone();
     }
 
     // Step 6: Fit a rotated rectangle around the largest contour
-    cv::RotatedRect boundingBox = cv::minAreaRect(largestContour);
+    cv::RotatedRect bounding_box = cv::minAreaRect(largest_contour);
 
     // Step 7: Calculate the tilt angle
-    double tiltAngle = boundingBox.angle;
-    if (boundingBox.size.width < boundingBox.size.height) {
-        tiltAngle += 90.0;
+    double tilt_angle = bounding_box.angle;
+    if (bounding_box.size.width < bounding_box.size.height) {
+        tilt_angle += ninety_degrees;
     }
 
     // Step 8: Rotate the image to correct tilt
-    cv::Point2f center(cardImage.cols / 2.0, cardImage.rows / 2.0);
-    cv::Mat rotationMatrix = cv::getRotationMatrix2D(center, tiltAngle, 1.0);
+    cv::Point2f center(
+        gsl::narrow_cast<float>(cardImage.cols / center_divisor),
+        gsl::narrow_cast<float>(cardImage.rows / center_divisor)
+    );
+    cv::Mat rotation_matrix = cv::getRotationMatrix2D(center, tilt_angle, 1.0);
 
-    cv::Mat correctedImage;
-    cv::warpAffine(cardImage, correctedImage, rotationMatrix, cardImage.size(), 
+    cv::Mat corrected_image;
+    cv::warpAffine(cardImage, corrected_image, rotation_matrix, cardImage.size(), 
                    cv::INTER_LINEAR, cv::BORDER_CONSTANT, cv::Scalar(0, 0, 0));
 
-    return correctedImage;
+    return corrected_image;
 }
 
 } // namespace detect

@@ -1,13 +1,14 @@
 #include <misc/path_helper.hpp>
+#include <filesystem>
 
 namespace misc {
 
-[[nodiscard]] std::filesystem::path getSamplesPath() {
-    return std::filesystem::path(SAMPLE_DATA_FOLDER);
+std::filesystem::path getSamplesPath() {
+    return {SAMPLE_DATA_FOLDER};
 }
 
-[[nodiscard]] std::filesystem::path getTestSamplesPath() {
-    return std::filesystem::path(TEST_SAMPLES_FOLDER);
+std::filesystem::path getTestSamplesPath() {
+    return {TEST_SAMPLES_FOLDER};
 }
 
 } // namespace misc

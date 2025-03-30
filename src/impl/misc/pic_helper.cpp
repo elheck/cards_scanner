@@ -1,50 +1,50 @@
 #include <misc/pic_helper.hpp>
-
 #include <spdlog/spdlog.h>
-
-#include <stdexcept>
+#include <opencv2/highgui.hpp>
 #include <chrono>
+#include <stdexcept>
 #include <iomanip>
 #include <sstream>
 #include <string>
 
 namespace misc {
 
-void displayResults(cv::Mat pic) {
-  cv::imshow("Card", pic);
-  cv::waitKey(0);
+namespace {
+    constexpr int MILLISECONDS_MOD = 1000;  // For timestamp generation
 }
 
-bool saveImage(const std::filesystem::path &savePath, cv::Mat pic, std::string name) {
-    try {
-        // Ensure the directory exists
-        std::filesystem::create_directories(savePath);
+void displayResults(const cv::Mat& pic) {
+    cv::imshow("Result", pic);
+    cv::waitKey(0);
+}
 
-        // Generate a unique name if not provided
+bool saveImage(const std::filesystem::path &savePath, const cv::Mat& pic, std::string name) {
+    try {
+        // If no name is provided, generate one with timestamp
         if (name.empty()) {
             auto now = std::chrono::system_clock::now();
-            auto in_time_t = std::chrono::system_clock::to_time_t(now);
             auto ms = std::chrono::duration_cast<std::chrono::milliseconds>(
-                now.time_since_epoch()) % 1000;
-
-            std::ostringstream oss;
-            oss << "image_" << std::put_time(std::localtime(&in_time_t), "%Y%m%d_%H%M%S")
-                << "_" << std::setfill('0') << std::setw(3) << ms.count() << ".png";
-            name = oss.str();
+                now.time_since_epoch()) % MILLISECONDS_MOD;
+            
+            name = "card_" + std::to_string(ms.count()) + ".jpg";
         }
 
-        // Construct the full path
-        auto fullPath = savePath / name;
+        // Ensure name ends with .jpg
+        if (name.find(".jpg") == std::string::npos) {
+            name += ".jpg";
+        }
+
+        auto full_path = savePath / name;
 
         // Save the image
-        if (!cv::imwrite(fullPath.string(), pic)) {
+        if (!cv::imwrite(full_path.string(), pic)) {
             throw std::runtime_error("Failed to write image to file");
         }
 
-        spdlog::info("Saved image to {}",fullPath.string());
+        spdlog::info("Saved image to {}", full_path.string());
         return true;
-    } catch (const std::exception &e) {
-        spdlog::critical("Error saving image: {}",e.what());
+    } catch (const std::exception& e) {
+        spdlog::error("Error saving image: {}", e.what());
         return false;
     }
 }

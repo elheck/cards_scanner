@@ -94,8 +94,8 @@ cv::Mat warpCard(const std::vector<cv::Point2f> &corners, const cv::Mat& undisto
     return warped;
 }
 
-bool detectCards(const cv::Mat& undistortedImage, std::vector<cv::Mat>& processedCards) {
-    processedCards.clear();
+bool detectCards(const cv::Mat& undistortedImage, std::vector<cv::Mat>& processed_cards) {
+    processed_cards.clear();
 
     // Calculate dynamic parameters based on image size
     int minDim = std::min(undistortedImage.cols, undistortedImage.rows);
@@ -179,7 +179,7 @@ bool detectCards(const cv::Mat& undistortedImage, std::vector<cv::Mat>& processe
         // Sort corners and warp the card
         cv::Mat warped = warpCard(corners, undistortedImage);
         if (!warped.empty()) {
-            processedCards.push_back(warped);
+            processed_cards.push_back(warped);
             return true;
         }
     }
@@ -196,7 +196,7 @@ bool detectCards(const cv::Mat& undistortedImage, std::vector<cv::Mat>& processe
 
     cv::Mat warped = warpCard(corners, undistortedImage);
     if (!warped.empty()) {
-        processedCards.push_back(warped);
+        processed_cards.push_back(warped);
         return true;
     }
 
@@ -207,7 +207,7 @@ bool detectCards(const cv::Mat& undistortedImage, std::vector<cv::Mat>& processe
 
 cv::Mat processCards(const std::filesystem::path& imagePath) {
     cv::Mat originalImage, undistortedImage;
-    std::vector<cv::Mat> processedCards;
+    std::vector<cv::Mat> processed_cards;
 
     if (!detail::loadImage(imagePath, originalImage, undistortedImage)) {
         throw std::runtime_error("Failed to load image");
@@ -221,16 +221,16 @@ cv::Mat processCards(const std::filesystem::path& imagePath) {
     detail::undistortImage(undistortedImage);
 
     // Step 2: Detect all cards
-    if (!detail::detectCards(undistortedImage, processedCards)) {
+    if (!detail::detectCards(undistortedImage, processed_cards)) {
         throw std::runtime_error("no cards detected");
     }
 
-    if (processedCards.empty()) {
+    if (processed_cards.empty()) {
         throw std::runtime_error("Not one card found");
     }
 
     // If we found at least one card, we're good
-    return processedCards.at(0);
+    return processed_cards.at(0);
 }
 
 } // namespace detect
