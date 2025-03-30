@@ -64,7 +64,7 @@ cv::Rect extractNameRegion(const cv::Mat& image) {
     int width = static_cast<int>(image.cols * regions::name_width_ratio);
     int height = static_cast<int>(image.rows * regions::name_height_ratio);
 
-    return cv::Rect(x, y, width, height);
+    return {x, y, width, height};
 }
 
 cv::Rect extractCollectorNumberRegionModern(const cv::Mat& image) {
@@ -73,7 +73,7 @@ cv::Rect extractCollectorNumberRegionModern(const cv::Mat& image) {
     int width = static_cast<int>(image.cols * regions::collector_width_ratio);
     int height = static_cast<int>(image.rows * regions::collector_height_ratio);
 
-    return cv::Rect(x, y, width, height);
+    return {x, y, width, height};
 }
 
 cv::Rect extractSetNameRegionModern(const cv::Mat& image) {
@@ -82,7 +82,7 @@ cv::Rect extractSetNameRegionModern(const cv::Mat& image) {
     int width = static_cast<int>(image.cols * regions::set_width_ratio);
     int height = static_cast<int>(image.rows * regions::set_height_ratio);
 
-    return cv::Rect(x, y, width, height);
+    return {x, y, width, height};
 }
 
 cv::Rect extractArtRegionRegular(const cv::Mat& image) {
@@ -143,7 +143,7 @@ cv::Rect extractArtRegionRegular(const cv::Mat& image) {
     }
 
     // Return an empty rectangle if no valid contour is found
-    return cv::Rect();
+    return {};
 }
 
 cv::Rect extractTextRegion(const cv::Mat& image) {
@@ -152,7 +152,7 @@ cv::Rect extractTextRegion(const cv::Mat& image) {
     int width = static_cast<int>(image.cols * regions::text_width_ratio);
     int height = static_cast<int>(image.rows * regions::text_height_ratio);
 
-    return cv::Rect(x, y, width, height);
+    return {x, y, width, height};
 }
 
 } // namespace detect
