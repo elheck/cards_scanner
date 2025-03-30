@@ -26,7 +26,7 @@ TEST_F(CardDetectionTest, EndToEndCardProcessing) {
     auto pic = detect::processCards(entry.path());
     EXPECT_FALSE(pic.empty()) << "Failed to process card from " << entry.path();
     
-    auto folder = std::filesystem::path(entry.path().parent_path().parent_path() / "tests" / "detection");
+    auto folder = misc::getTestSamplesPath() / "detection";
     EXPECT_TRUE(misc::saveImage(folder, pic));
   }
 }
@@ -44,7 +44,7 @@ TEST_F(CardDetectionTest, CardDetectionAndTiltCorrection) {
     EXPECT_FALSE(pic.empty()) << "Failed to correct tilt for " << entry.path();
     
     // Save the processed image
-    auto folder = std::filesystem::path(entry.path().parent_path().parent_path() / "tests" / "tilt_correction");
+    auto folder = misc::getTestSamplesPath() / "tilt_correction";
     EXPECT_TRUE(misc::saveImage(folder, pic));
   }
 }

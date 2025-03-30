@@ -12,8 +12,14 @@ project(card_scanner
     DESCRIPTION "MTG Card Scanner with OpenCV"
 )
 
-add_compile_definitions("SAMPLE_DATA_FOLDER=\"${CMAKE_SOURCE_DIR}/tests/sample_cards\"")
+# Define test samples directory relative to project root
+set(TEST_SAMPLES_FOLDER "${CMAKE_SOURCE_DIR}/tests/test_samples")
 
+# Add compile definitions for paths
+add_compile_definitions(
+    SAMPLE_DATA_FOLDER="${CMAKE_SOURCE_DIR}/tests/sample_cards"
+    TEST_SAMPLES_FOLDER="${TEST_SAMPLES_FOLDER}"
+)
 
 # Set C++ standard
 set(CMAKE_CXX_STANDARD 17)
