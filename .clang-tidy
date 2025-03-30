@@ -8,7 +8,9 @@ Checks: '
   portability-*,
   readability-*,
   -modernize-use-trailing-return-type,
-  -readability-identifier-length
+  -readability-identifier-length,
+  -readability-magic-numbers,
+  -cppcoreguidelines-avoid-magic-numbers
 '
 WarningsAsErrors: ''
 FormatStyle: file
@@ -18,4 +20,4 @@ CheckOptions:
   - key: readability-identifier-naming.FunctionCase
     value: camelBack
   - key: readability-identifier-naming.VariableCase
-    value: camelBack
+    value: lower_case

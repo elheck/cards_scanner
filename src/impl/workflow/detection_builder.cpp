@@ -25,6 +25,6 @@ cv::Mat DetectionBuilder::processModernNormal(const std::filesystem::path& image
     auto card_with_name = detect::extractNameRegion(card);
 
     
-    return card;
+    return card_with_name;
 }
 } // namespace workflow
