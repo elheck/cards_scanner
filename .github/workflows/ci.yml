@@ -29,6 +29,10 @@ jobs:
         sudo apt-get install -y cmake build-essential
         sudo apt-get install -y libopencv-dev python3-opencv
 
+    - name: Configure Conan
+      run: |
+        conan profile detect --force
+        
     - name: Configure CMake
       run: |
         mkdir -p build
@@ -85,7 +89,7 @@ jobs:
       run: |
         mkdir -p build
         cd build
-        cmake -DCMAKE_EXPORT_COMPILE_COMMANDS=ON ..
+        cmake ..
 
     - name: Build
       working-directory: build
