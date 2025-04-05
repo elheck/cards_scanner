@@ -27,12 +27,12 @@ namespace {
 namespace detail {
 
 bool loadImage(const std::filesystem::path &imagePath, cv::Mat& originalImage, cv::Mat& undistortedImage) {
+    originalImage = cv::imread(imagePath.string());
     if (!std::filesystem::exists(imagePath)) {
         spdlog::error("Image file does not exist: {}", imagePath.string());
         return false;
     }
     
-    originalImage = cv::imread(imagePath.string(), cv::IMREAD_COLOR);
     if (originalImage.empty()) {
         spdlog::error("Failed to load image (format not recognized or file corrupted): {}", imagePath.string());
         spdlog::debug("File size: {} bytes", std::filesystem::file_size(imagePath));
@@ -236,9 +236,10 @@ cv::Mat processCards(const std::filesystem::path& imagePath) {
     cv::Mat undistorted_image;
     std::vector<cv::Mat> processed_cards;
 
-    ASSERT(detail::loadImage(imagePath, original_image, undistorted_image), 
-           "Failed to load image", imagePath.string()); 
-
+    ASSERT(!imagePath.empty(), "Image path is empty in process_cards");
+    if (!detail::loadImage(imagePath, original_image, undistorted_image)) {
+        throw std::runtime_error("Failed to load image");
+    }
 
     if (undistorted_image.empty()) {
         throw std::runtime_error("no cards");

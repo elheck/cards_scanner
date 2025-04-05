@@ -71,6 +71,7 @@ target_link_libraries(workflow_lib
         card_processor_lib
     PRIVATE
         ${OpenCV_LIBS}
+        libassert::assert
 )
 
 # Add executable

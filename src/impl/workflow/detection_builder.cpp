@@ -3,6 +3,8 @@
 #include <detection/region_extraction.hpp>
 #include <detection/tilt_corrector.hpp>
 #include <detection/card_text_ocr.hpp>
+
+#include <libassert/assert.hpp>
 #include <stdexcept>
 
 namespace workflow {
@@ -25,6 +27,7 @@ cv::Mat DetectionBuilder::process(const std::filesystem::path& imagePath) {
 
 cv::Mat DetectionBuilder::processModernNormal(const std::filesystem::path& imagePath) {
     // Process the card using the detection pipeline
+    ASSERT(!imagePath.empty(), "Image path is empty");
     auto card = detect::processCards(imagePath);
 
     // Apply tilt correction
