@@ -3,6 +3,8 @@ find_package(OpenCV REQUIRED)
 find_package(spdlog REQUIRED)
 find_package(libassert REQUIRED)
 find_package(Microsoft.GSL REQUIRED)
+find_package(Tesseract REQUIRED)
+find_package(Leptonica REQUIRED)
 
 # Define the misc utility library
 add_library(misc_lib
@@ -30,6 +32,7 @@ add_library(card_processor_lib
     impl/detection/card_detector.cpp
     impl/detection/tilt_corrector.cpp
     impl/detection/region_extraction.cpp
+    impl/detection/card_text_ocr.cpp
 )
 
 target_include_directories(card_processor_lib 
@@ -47,6 +50,8 @@ target_link_libraries(card_processor_lib
         spdlog::spdlog
         libassert::assert
         Microsoft.GSL::GSL
+        Tesseract::libtesseract
+        leptonica
 )
 
 # Add workflow library
@@ -77,6 +82,7 @@ target_include_directories(card_scanner
     PRIVATE
         ${OpenCV_INCLUDE_DIRS}    
 )
+
 
 # Link the executable with workflow_lib (which transitively includes card_processor_lib and misc_lib)
 target_link_libraries(card_scanner 

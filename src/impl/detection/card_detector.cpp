@@ -1,5 +1,6 @@
 #include <detection/card_detector.hpp>
 #include <spdlog/spdlog.h>
+#include <libassert/assert.hpp>
 #include <stdexcept>
 #include <cmath>
 #include <array>
@@ -26,11 +27,20 @@ namespace {
 namespace detail {
 
 bool loadImage(const std::filesystem::path &imagePath, cv::Mat& originalImage, cv::Mat& undistortedImage) {
-    originalImage = cv::imread(imagePath.string());
-    if (originalImage.empty()) {
-        spdlog::error("Failed to load image: {}", imagePath.string());
+    if (!std::filesystem::exists(imagePath)) {
+        spdlog::error("Image file does not exist: {}", imagePath.string());
         return false;
     }
+    
+    originalImage = cv::imread(imagePath.string(), cv::IMREAD_COLOR);
+    if (originalImage.empty()) {
+        spdlog::error("Failed to load image (format not recognized or file corrupted): {}", imagePath.string());
+        spdlog::debug("File size: {} bytes", std::filesystem::file_size(imagePath));
+        return false;
+    }
+
+    spdlog::debug("Successfully loaded image: {}x{} with {} channels", 
+                 originalImage.cols, originalImage.rows, originalImage.channels());
 
     // Make a copy for processing
     undistortedImage = originalImage.clone();
@@ -226,9 +236,9 @@ cv::Mat processCards(const std::filesystem::path& imagePath) {
     cv::Mat undistorted_image;
     std::vector<cv::Mat> processed_cards;
 
-    if (!detail::loadImage(imagePath, original_image, undistorted_image)) {
-        throw std::runtime_error("Failed to load image");
-    }
+    ASSERT(detail::loadImage(imagePath, original_image, undistorted_image), 
+           "Failed to load image", imagePath.string()); 
+
 
     if (undistorted_image.empty()) {
         throw std::runtime_error("no cards");

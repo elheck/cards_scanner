@@ -46,10 +46,15 @@ int main(int argc, char *argv[]) {
         return 1;
     }
 
-    // Check if image path is provided
+    // Check if image path is provided and exists
     if (image_path.empty()) {
-        spdlog::warn("Error: No input file specified");
+        spdlog::critical("Error: No input file specified");
         printUsage(args[0]);
+        return 1;
+    }
+
+    if (!std::filesystem::exists(image_path)) {
+        spdlog::critical("Error: Input file does not exist: {}", image_path.string());
         return 1;
     }
 
@@ -60,12 +65,17 @@ int main(int argc, char *argv[]) {
         // Process the card using the builder
         auto processed_card = builder.process(image_path);
 
-        if(!misc::saveImage(misc::getTestSamplesPath(), processed_card, "test_out.jpg")){
+        if (!misc::saveImage(misc::getTestSamplesPath(), processed_card, "test_out.jpg")) {
             spdlog::critical("Error: Failed to save image");
             return 1;
         }
-    } catch (const std::exception& e) {
+        
+        spdlog::info("Processing completed successfully");
+    } catch (const std::runtime_error& e) {
         spdlog::critical("Error processing card: {}", e.what());
+        return 1;
+    } catch (const std::exception& e) {
+        spdlog::critical("Unexpected error: {}", e.what());
         return 1;
     }
 

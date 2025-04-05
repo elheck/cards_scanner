@@ -22,6 +22,11 @@ public:
 
 private:
     CardType type_;
-    static cv::Mat processModernNormal(const std::filesystem::path& imagePath);
+    cv::Mat nameImage_;
+    cv::Mat collectorNumberImage_;
+    cv::Mat setNameImage_;
+    cv::Mat artImage_;
+    cv::Mat processModernNormal(const std::filesystem::path& imagePath);
+    void readTextFromRegions();
 };
 }

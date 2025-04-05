@@ -2,6 +2,7 @@
 #include <detection/card_detector.hpp>
 #include <detection/region_extraction.hpp>
 #include <detection/tilt_corrector.hpp>
+#include <detection/card_text_ocr.hpp>
 #include <stdexcept>
 
 namespace workflow {
@@ -9,12 +10,17 @@ namespace workflow {
 DetectionBuilder::DetectionBuilder(CardType type) : type_(type) {}
 
 cv::Mat DetectionBuilder::process(const std::filesystem::path& imagePath) {
+    cv::Mat result;  
     switch (type_) {
         case CardType::modernNormal:
-            return processModernNormal(imagePath);
+            result = processModernNormal(imagePath);
+            readTextFromRegions();  
+            break;
         default:
             throw std::runtime_error("Unsupported card type");
     }
+    
+    return result;  // Return the processed result
 }
 
 cv::Mat DetectionBuilder::processModernNormal(const std::filesystem::path& imagePath) {
@@ -29,6 +35,12 @@ cv::Mat DetectionBuilder::processModernNormal(const std::filesystem::path& image
     auto collector_box = detect::extractCollectorNumberRegionModern(card);
     auto set_name_box = detect::extractSetNameRegionModern(card);
     auto art_box = detect::extractArtRegionRegular(card);
+
+    // Store the extracted regions in member variables
+    nameImage_ = card(name_box).clone();
+    collectorNumberImage_ = card(collector_box).clone();
+    setNameImage_ = card(set_name_box).clone();
+    artImage_ = card(art_box).clone();
 
     // Draw all bounding boxes on the card with different colors
     cv::Mat result = card.clone();
@@ -46,5 +58,9 @@ cv::Mat DetectionBuilder::processModernNormal(const std::filesystem::path& image
     cv::rectangle(result, art_box, cv::Scalar(0, 255, 255), 2);
 
     return result;
+}
+
+void DetectionBuilder::readTextFromRegions() {
+  
 }
 } // namespace workflow
