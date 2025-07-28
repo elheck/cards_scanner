@@ -1,4 +1,4 @@
-#include <detection/region_extraction.hpp>
+#include <region_extraction.hpp>
 #include <spdlog/spdlog.h>
 
 namespace detect {

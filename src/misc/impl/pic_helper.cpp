@@ -1,4 +1,4 @@
-#include <misc/pic_helper.hpp>
+#include <pic_helper.hpp>
 #include <spdlog/spdlog.h>
 #include <libassert/assert.hpp>
 #include <opencv2/highgui.hpp>

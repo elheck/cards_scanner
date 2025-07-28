@@ -1,7 +1,7 @@
-#include <detection/card_detector.hpp>
-#include <detection/tilt_corrector.hpp>
-#include <misc/pic_helper.hpp>
-#include <misc/path_helper.hpp>
+#include <card_detector.hpp>
+#include <tilt_corrector.hpp>
+#include <pic_helper.hpp>
+#include <path_helper.hpp>
 
 #include <filesystem>
 #include <gtest/gtest.h>

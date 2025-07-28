@@ -1,4 +1,4 @@
-#include <detection/tilt_corrector.hpp>
+#include <tilt_corrector.hpp>
 #include <opencv2/opencv.hpp>
 #include <opencv2/imgproc.hpp>
 #include <opencv2/highgui.hpp>

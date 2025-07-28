@@ -1,8 +1,8 @@
-#include <workflow/detection_builder.hpp>
-#include <detection/card_detector.hpp>
-#include <detection/region_extraction.hpp>
-#include <detection/tilt_corrector.hpp>
-#include <detection/card_text_ocr.hpp>
+#include <detection_builder.hpp>
+#include <card_detector.hpp>
+#include <region_extraction.hpp>
+#include <tilt_corrector.hpp>
+#include <card_text_ocr.hpp>
 
 #include <libassert/assert.hpp>
 #include <stdexcept>

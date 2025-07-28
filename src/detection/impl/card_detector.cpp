@@ -1,4 +1,4 @@
-#include <detection/card_detector.hpp>
+#include <card_detector.hpp>
 #include <spdlog/spdlog.h>
 #include <libassert/assert.hpp>
 #include <stdexcept>

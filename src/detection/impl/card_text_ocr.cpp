@@ -1,4 +1,4 @@
-#include <detection/card_text_ocr.hpp>
+#include <card_text_ocr.hpp>
 #include <tesseract/baseapi.h>
 #include <spdlog/spdlog.h>
 

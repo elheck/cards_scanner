@@ -1,6 +1,7 @@
-#include <workflow/detection_builder.hpp>
-#include <misc/pic_helper.hpp>
-#include <misc/path_helper.hpp>
+#include <detection_builder.hpp>
+#include <pic_helper.hpp>
+#include <path_helper.hpp>
+
 #include <gtest/gtest.h>
 #include <filesystem>
 #include <opencv2/opencv.hpp>

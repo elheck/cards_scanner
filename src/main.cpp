@@ -1,6 +1,6 @@
-#include <workflow/detection_builder.hpp>
-#include <misc/pic_helper.hpp>
-#include <misc/path_helper.hpp>
+#include <detection_builder.hpp>
+#include <pic_helper.hpp>
+#include <path_helper.hpp>
 
 #include <spdlog/spdlog.h>
 #include <libassert/assert.hpp>
@@ -64,7 +64,7 @@ int main(int argc, char *argv[]) {
         
         // Process the card using the builder
         auto processed_card = builder.process(image_path);
-        
+
         if (!misc::saveImage(misc::getTestSamplesPath(), processed_card, "test_out.jpg")) {
             spdlog::critical("Error: Failed to save image");
             return 1;

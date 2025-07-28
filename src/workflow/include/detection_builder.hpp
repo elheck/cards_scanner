@@ -1,9 +1,7 @@
 #pragma once
 
-#include <detection/card_detector.hpp>
-#include <detection/region_extraction.hpp>
-#include <detection/tilt_corrector.hpp>
 #include <opencv2/opencv.hpp>
+
 #include <filesystem>
 
 namespace workflow {
