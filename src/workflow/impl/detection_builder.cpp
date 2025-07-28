@@ -64,6 +64,6 @@ cv::Mat DetectionBuilder::processModernNormal(const std::filesystem::path& image
 }
 
 void DetectionBuilder::readTextFromRegions() {
-  
+  auto preprocessed_name = detect::preprocessForOcr(nameImage_.clone());
 }
 } // namespace workflow

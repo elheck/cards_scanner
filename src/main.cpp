@@ -64,7 +64,7 @@ int main(int argc, char *argv[]) {
         
         // Process the card using the builder
         auto processed_card = builder.process(image_path);
-
+        
         if (!misc::saveImage(misc::getTestSamplesPath(), processed_card, "test_out.jpg")) {
             spdlog::critical("Error: Failed to save image");
             return 1;

@@ -1,6 +1,5 @@
 #include <detection/card_text_ocr.hpp>
 #include <tesseract/baseapi.h>
-#include <leptonica/allheaders.h>
 #include <spdlog/spdlog.h>
 
 namespace detect {
@@ -26,7 +25,7 @@ cv::Mat preprocessForOcr(const cv::Mat& image) {
     return processed;
 }
 
-std::string extractText(const cv::Mat& image, std::string language) {
+std::string extractText(const cv::Mat& image, const std::string& language) {
     // Initialize Tesseract OCR
     tesseract::TessBaseAPI tess;
     if (tess.Init(nullptr, "eng")) {
