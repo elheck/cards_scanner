@@ -11,9 +11,9 @@ enum class CardType {
     // Can be extended with more card types in the future
 };
 
-class DetectionBuilder {
+class DetectionWorkflow {
 public:
-    explicit DetectionBuilder(CardType type);
+    explicit DetectionWorkflow(CardType type);
     
     // Build and process the card image
     cv::Mat process(const std::filesystem::path& imagePath);

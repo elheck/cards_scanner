@@ -9,14 +9,17 @@
 
 namespace workflow {
 
-DetectionBuilder::DetectionBuilder(CardType type) : type_(type) {}
 
-cv::Mat DetectionBuilder::process(const std::filesystem::path& imagePath) {
+
+DetectionWorkflow::DetectionWorkflow(CardType type) : type_(type) {}
+
+cv::Mat DetectionWorkflow::process(const std::filesystem::path& imagePath) {
     cv::Mat result;  
     switch (type_) {
         case CardType::modernNormal:
             result = processModernNormal(imagePath);
             readTextFromRegions();  
+            
             break;
         default:
             throw std::runtime_error("Unsupported card type");
@@ -25,7 +28,7 @@ cv::Mat DetectionBuilder::process(const std::filesystem::path& imagePath) {
     return result;  // Return the processed result
 }
 
-cv::Mat DetectionBuilder::processModernNormal(const std::filesystem::path& imagePath) {
+cv::Mat DetectionWorkflow::processModernNormal(const std::filesystem::path& imagePath) {
     // Process the card using the detection pipeline
     ASSERT(!imagePath.empty(), "Image path is empty");
     auto card = detect::processCards(imagePath);
@@ -63,7 +66,7 @@ cv::Mat DetectionBuilder::processModernNormal(const std::filesystem::path& image
     return result;
 }
 
-void DetectionBuilder::readTextFromRegions() {
+void DetectionWorkflow::readTextFromRegions() {
   auto preprocessed_name = detect::preprocessForOcr(nameImage_.clone());
 }
 } // namespace workflow

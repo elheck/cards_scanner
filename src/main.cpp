@@ -60,7 +60,7 @@ int main(int argc, char *argv[]) {
 
     try {
         // Create a detection builder for modern normal cards
-        workflow::DetectionBuilder builder(workflow::CardType::modernNormal);
+        workflow::DetectionWorkflow builder(workflow::CardType::modernNormal);
         
         // Process the card using the builder
         auto processed_card = builder.process(image_path);
