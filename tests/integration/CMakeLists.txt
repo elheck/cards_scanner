@@ -5,6 +5,7 @@ if(NOT TARGET GTest::gtest)
     find_package(GTest REQUIRED)
 endif()
 find_package(OpenCV REQUIRED)
+find_package(spdlog REQUIRED)
 
 # Define the integration test executable
 add_executable(test_card_detection
@@ -22,6 +23,7 @@ target_include_directories(test_card_detection PRIVATE
 target_link_libraries(test_card_detection PRIVATE
     card_processor_lib
     workflow_lib
+    spdlog::spdlog
     GTest::gtest
     GTest::gtest_main
 )
