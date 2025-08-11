@@ -9,6 +9,11 @@ tesseract/5.5.0
 [options]
 leptonica*:with_jpeg=libjpeg-turbo
 libtiff*:jpeg=libjpeg-turbo
+# Force tesseract and leptonica to use system libraries where possible
+tesseract*:with_training_tools=False
+leptonica*:with_libpng=False
+leptonica*:with_libtiff=False
+leptonica*:with_libwebp=False
 
 [generators]
 CMakeDeps
