@@ -43,9 +43,11 @@ conan_cmake_configure(
         gtest/1.13.0#b79e331e44bc2ce4fca3cf59c56387b6
         spdlog/1.15.1#92e99f07f134481bce4b70c1a41060e7
         libassert/2.1.4#de095beca7f09b01b613dd4e03574f88
-        ms-gsl/4.1.0#e2af591b5e8c3a3f6a570cf9cbcd7a87
+    ms-gsl/4.1.0#e2af591b5e8c3a3f6a570cf9cbcd7a87
         tesseract/5.5.0#cc1f274c2b9c226ef36863aaf26c68ea
     OPTIONS 
+    leptonica*:with_jpeg=libjpeg-turbo
+    libtiff*:jpeg=libjpeg-turbo
     GENERATORS 
         CMakeDeps
 )
