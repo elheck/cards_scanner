@@ -36,33 +36,33 @@ if(NOT EXISTS "${CMAKE_BINARY_DIR}/conan.cmake")
 endif()
 include(${CMAKE_BINARY_DIR}/conan.cmake)
 
-# Configure Conan for version 2.x
-conan_cmake_configure(
-    REQUIRES 
-        zstd/1.5.5#8400bcba21d1b495dca55edf3f065246
-        gtest/1.13.0#b79e331e44bc2ce4fca3cf59c56387b6
-        spdlog/1.15.1#92e99f07f134481bce4b70c1a41060e7
-        libassert/2.1.4#de095beca7f09b01b613dd4e03574f88
-    ms-gsl/4.1.0#e2af591b5e8c3a3f6a570cf9cbcd7a87
-        tesseract/5.5.0#cc1f274c2b9c226ef36863aaf26c68ea
-    OPTIONS 
-    leptonica*:with_jpeg=libjpeg-turbo
-    libtiff*:jpeg=libjpeg-turbo
-    GENERATORS 
-        CMakeDeps
-)
+# Use root conanfile.txt (and optional lockfile) instead of inline REQUIRES list.
+if(EXISTS "${CMAKE_SOURCE_DIR}/conan.lock")
+    message(STATUS "Using Conan lockfile: ${CMAKE_SOURCE_DIR}/conan.lock")
+    set(CONAN_LOCKFILE "${CMAKE_SOURCE_DIR}/conan.lock")
+endif()
 
 # Install dependencies
 conan_cmake_autodetect(settings)
 
-conan_cmake_install(
-    PATH_OR_REFERENCE .
+set(_conan_install_args
+    PATH_OR_REFERENCE "${CMAKE_SOURCE_DIR}"  # root with conanfile.txt
     BUILD missing
     SETTINGS ${settings}
 )
+if(CONAN_LOCKFILE)
+    list(APPEND _conan_install_args LOCKFILE "${CONAN_LOCKFILE}")
+endif()
+conan_cmake_install(${_conan_install_args})
 
 # Add the directory where Conan places the CMake configuration files to CMAKE_PREFIX_PATH
 list(APPEND CMAKE_PREFIX_PATH "${CMAKE_BINARY_DIR}")
+set(_CONAN_GEN_DIR "${CMAKE_BINARY_DIR}/${CMAKE_BUILD_TYPE}/generators")
+if(EXISTS "${_CONAN_GEN_DIR}")
+    list(APPEND CMAKE_PREFIX_PATH "${_CONAN_GEN_DIR}")
+elseif(EXISTS "${CMAKE_BINARY_DIR}/generators")
+    list(APPEND CMAKE_PREFIX_PATH "${CMAKE_BINARY_DIR}/generators")
+endif()
 
 
 # Add source directories
