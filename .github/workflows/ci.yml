@@ -18,12 +18,11 @@ jobs:
         python -m pip install --upgrade pip
         pip install conan>=2.0.0
         conan --version
-
     - name: Cache Conan
       uses: actions/cache@v4
       with:
         path: ~/.conan2
-        key: ${{ runner.os }}-conan-${{ hashFiles('conan.lock') }}
+        key: ${{ runner.os }}-conan-${{ hashFiles('conan-*.lock') }}
         restore-keys: ${{ runner.os }}-conan-
 
     - name: Install clang-tidy
@@ -40,41 +39,22 @@ jobs:
       run: |
         conan profile detect --force
         
-    - name: Configure CMake
+    - name: Run build and clang-tidy
       run: |
-        mkdir -p build
-        cd build
-        cmake -DCMAKE_EXPORT_COMPILE_COMMANDS=ON ..
-
-    - name: Run clang-tidy
-      run: |
-        set -e
-        exit_code=0
-        files_with_errors=""
-        while IFS= read -r file; do
-          echo "Checking $file..."
-          if ! clang-tidy -warnings-as-errors=* -p build/ "$file"; then
-            echo "❌ clang-tidy failed for $file"
-            files_with_errors="$files_with_errors\n$file"
-            exit_code=1
-          fi
-        done < <(find src -name '*.cpp' -o -name '*.h')
-        if [ $exit_code -ne 0 ]; then
-          echo -e "\n❌ Files with clang-tidy errors:$files_with_errors"
-        fi
-        exit $exit_code
+        chmod +x ./build.sh ./clang_tidy.sh
+        ./build.sh
+        ./clang_tidy.sh
 
   build-and-test:
     runs-on: ubuntu-latest
 
     steps:
     - uses: actions/checkout@v3
-
     - name: Cache Conan
       uses: actions/cache@v4
       with:
         path: ~/.conan2
-        key: ${{ runner.os }}-conan-${{ hashFiles('conan.lock') }}
+        key: ${{ runner.os }}-conan-${{ hashFiles('conan-*.lock') }}
         restore-keys: ${{ runner.os }}-conan-
 
     - name: Set up Python
@@ -98,26 +78,20 @@ jobs:
     - name: Configure Conan & validate lockfile
       run: |
         conan profile detect --force
-        if [ -f conan.lock ]; then
-          echo "Validating existing lockfile"
-          conan lock create . --lockfile=conan.lock --lockfile-out=verify.lock --build=missing
+        ARCH_FILE="conan-$(uname -m).lock"
+        if [ -f "$ARCH_FILE" ]; then
+          echo "Validating existing lockfile: $ARCH_FILE"
+          conan lock create . --lockfile="$ARCH_FILE" --lockfile-out=verify.lock --build=missing
         else
-          echo "No lockfile present, skipping validation" >&2
+          echo "No lockfile present (expected $ARCH_FILE)" >&2
+          exit 1
         fi
 
-    - name: Configure CMake
+    - name: Build and test
       run: |
-        mkdir -p build
-        cd build
-        cmake ..
-
-    - name: Build
-      working-directory: build
-      run: cmake --build . --parallel
-
-    - name: Run tests
-      working-directory: build
-      run: ctest -V
+        chmod +x ./rebuild.sh ./run_test.sh
+        ./rebuild.sh
+        ./run_test.sh
 
   lock-drift:
     runs-on: ubuntu-latest
@@ -133,20 +107,22 @@ jobs:
         uses: actions/cache@v4
         with:
           path: ~/.conan2
-          key: ${{ runner.os }}-conan-${{ hashFiles('conan.lock') }}
+          key: ${{ runner.os }}-conan-${{ hashFiles('conan-*.lock') }}
           restore-keys: ${{ runner.os }}-conan-
       - name: Detect profile
         run: conan profile detect --force
       - name: Check lock drift (no build allowed)
         run: |
-          if [ ! -f conan.lock ]; then
-            echo "Missing conan.lock" >&2; exit 1; fi
+          ARCH_FILE="conan-$(uname -m).lock"
+          if [ ! -f "$ARCH_FILE" ]; then
+            echo "Missing lockfile: $ARCH_FILE" >&2; exit 1
+          fi
           set -e
-          conan lock create . --lockfile=conan.lock --lockfile-out=drift.lock --build=never || { echo "Unexpected build attempted (lock incomplete)"; exit 1; }
-          if ! diff -q conan.lock drift.lock >/dev/null; then
-            echo "Lockfile drift detected. Run ./update_lock.sh and commit updated conan.lock." >&2
+          conan lock create . --lockfile="$ARCH_FILE" --lockfile-out=drift.lock --build=never || { echo "Unexpected build attempted (lock incomplete)"; exit 1; }
+          if ! diff -q "$ARCH_FILE" drift.lock >/dev/null; then
+            echo "Lockfile drift detected. Run ./update_lock.sh and commit updated $ARCH_FILE." >&2
             echo '--- Diff (truncated) ---'
-            diff -u conan.lock drift.lock | head -n 200 || true
+            diff -u "$ARCH_FILE" drift.lock | head -n 200 || true
             exit 1
           fi
           echo "No lock drift detected."

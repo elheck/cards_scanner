@@ -3,33 +3,34 @@
 
 # Build and run
 ```bash
-./rebuild.sh        # full clean configure + build using existing lockfile if present
-./update_lock.sh    # refresh conan.lock with current profiles (default profile unless specified)
+./rebuild.sh        # full clean configure + build using architecture-specific lockfile
+./update_lock.sh    # refresh conan-<arch>.lock with current profiles (default profile unless specified)
 ./run_test.sh       # run integration tests
 ./build.sh          # incremental build (if provided)
 ```
 
 ## Dependency Management (Conan)
-This project uses Conan 2 with a lockfile for reproducible builds.
+This project uses Conan 2 with architecture-specific lockfiles for reproducible builds.
 
 Artifacts:
 - `conanfile.txt`: Declares high-level requirements and options.
-- `conan.lock`: Generated; pins exact recipe and package revisions.
-- `update_lock.sh`: Regenerates the lockfile (use when intentionally updating dependencies).
+- `conan-x86_64.lock`: Generated lockfile for x86_64 systems (CI/servers).
+- `conan-armv8.lock`: Generated lockfile for ARM64 systems (Apple Silicon, Raspberry Pi).
+- `update_lock.sh`: Regenerates the architecture-specific lockfile.
 
 Normal workflow:
-1. Build (will reuse pinned revisions):
+1. Build (will reuse pinned revisions from appropriate arch lockfile):
 	```bash
 	./rebuild.sh
 	```
 2. Update dependencies (intentional upgrade):
 	```bash
-	./update_lock.sh            # or ./update_lock.sh <profile>
-	git add conan.lock
+	./update_lock.sh            # generates conan-<arch>.lock for current system
+	git add conan-*.lock
 	git commit -m "chore(deps): update lockfile"
 	```
 
-CI validates the lock by attempting a locked install; if a dependency drift occurs without updating the lock, the build fails.
+CI validates the lockfile by attempting a locked install; if a dependency drift occurs without updating the lockfile, the build fails. The system automatically selects the appropriate lockfile based on the target architecture.
 
 # Contract:
 This is running on a raspi. 

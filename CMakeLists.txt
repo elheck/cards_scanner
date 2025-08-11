@@ -37,9 +37,33 @@ endif()
 include(${CMAKE_BINARY_DIR}/conan.cmake)
 
 # Use root conanfile.txt (and optional lockfile) instead of inline REQUIRES list.
-if(EXISTS "${CMAKE_SOURCE_DIR}/conan.lock")
-    message(STATUS "Using Conan lockfile: ${CMAKE_SOURCE_DIR}/conan.lock")
-    set(CONAN_LOCKFILE "${CMAKE_SOURCE_DIR}/conan.lock")
+# Prefer architecture-specific lockfile (conan-<arch>.lock) if available.
+set(_ARCH_HINT "")
+if(CMAKE_SYSTEM_PROCESSOR)
+    string(TOLOWER "${CMAKE_SYSTEM_PROCESSOR}" _ARCH_HINT)
+endif()
+if(DEFINED CMAKE_HOST_SYSTEM_PROCESSOR AND NOT _ARCH_HINT)
+    string(TOLOWER "${CMAKE_HOST_SYSTEM_PROCESSOR}" _ARCH_HINT)
+endif()
+
+set(_CANDIDATE_LOCKFILES)
+if(_ARCH_HINT MATCHES "arm64|aarch64")
+    list(APPEND _CANDIDATE_LOCKFILES "${CMAKE_SOURCE_DIR}/conan-armv8.lock")
+endif()
+if(_ARCH_HINT MATCHES "x86_64|amd64")
+    list(APPEND _CANDIDATE_LOCKFILES "${CMAKE_SOURCE_DIR}/conan-x86_64.lock")
+endif()
+
+foreach(lockfile IN LISTS _CANDIDATE_LOCKFILES)
+    if(NOT CONAN_LOCKFILE AND EXISTS "${lockfile}")
+        set(CONAN_LOCKFILE "${lockfile}")
+    endif()
+endforeach()
+
+if(CONAN_LOCKFILE)
+    message(STATUS "Using Conan lockfile: ${CONAN_LOCKFILE}")
+else()
+    message(WARNING "No Conan lockfile found (expected one of: ${_CANDIDATE_LOCKFILES}). Proceeding unlocked.")
 endif()
 
 # Install dependencies
