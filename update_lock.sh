@@ -1,12 +1,9 @@
 #!/usr/bin/env bash
 set -euo pipefail
 
-# Usage: ./update_lock.sh [profile]
-# Generates/updates an architecture-specific Conan lockfile: conan-<arch>.lock
-# (e.g. conan-x86_64.lock, conan-armv8.lock) for reproducible builds across hosts.
-# Optional first argument: profile name (must exist in ~/.conan2/profiles). Defaults to 'default'.
-
-PROFILE=${1:-default}
+# Usage: ./update_lock.sh
+# Generates/updates architecture-specific Conan lockfiles for both x86_64 and armv8
+# architectures: conan-x86_64.lock and conan-armv8.lock for reproducible builds.
 
 if ! command -v conan >/dev/null 2>&1; then
   echo "conan executable not found in PATH" >&2
@@ -17,26 +14,32 @@ fi
 BUILD_DIR=build
 mkdir -p "$BUILD_DIR"
 
-echo "Detecting profile ($PROFILE) to determine architecture..." >&2
-conan profile detect --force >/dev/null 2>&1 || true
+# Function to generate lockfile for a specific architecture
+generate_lockfile() {
+  local profile="$1"
+  local arch="$2"
+  
+  echo "Generating lockfile for arch: ${arch} -> conan-${arch}.lock" >&2
+  conan lock create . \
+    --lockfile-out="conan-${arch}.lock" \
+    --profile="$profile" \
+    --build=missing \
+    -s arch="${arch}"
 
-PROFILE_PATH="$(conan profile path "$PROFILE" 2>/dev/null || true)"
-if [ -z "$PROFILE_PATH" ] || [ ! -f "$PROFILE_PATH" ]; then
-  echo "Profile '$PROFILE' not found (looked for $PROFILE_PATH)" >&2
-  exit 1
+  echo "Lockfile written to conan-${arch}.lock" >&2
+}
+
+# Generate lockfiles for both architectures
+echo "Updating lockfiles for both architectures..." >&2
+
+# Check if x86_64 profile exists, otherwise use default with arch override
+if conan profile path x86_64 >/dev/null 2>&1; then
+  generate_lockfile "x86_64" "x86_64"
+else
+  generate_lockfile "default" "x86_64"
 fi
 
-ARCH=$(grep -E '^arch=' "$PROFILE_PATH" | head -n1 | cut -d'=' -f2 | tr -d '[:space:]')
-if [ -z "$ARCH" ]; then
-  echo "Could not determine arch from profile ($PROFILE_PATH)" >&2
-  exit 1
-fi
+# Generate armv8 lockfile using default profile with arch override
+generate_lockfile "default" "armv8"
 
-LOCKFILE="conan-${ARCH}.lock"
-echo "Generating lockfile for arch: ${ARCH} -> ${LOCKFILE}" >&2
-conan lock create . \
-  --lockfile-out="${LOCKFILE}" \
-  --profile="$PROFILE" \
-  --build=missing
-
-echo "Lockfile written to ${LOCKFILE}" >&2
+echo "Both lockfiles updated successfully!" >&2
