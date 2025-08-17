@@ -3,7 +3,6 @@ find_package(OpenCV REQUIRED)
 find_package(spdlog REQUIRED)
 find_package(libassert REQUIRED)
 find_package(Microsoft.GSL REQUIRED)
-find_package(Tesseract REQUIRED)
 
 # Add the library subdirectories
 add_subdirectory(misc)

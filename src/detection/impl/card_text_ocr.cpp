@@ -1,5 +1,4 @@
 #include <card_text_ocr.hpp>
-#include <tesseract/baseapi.h>
 #include <spdlog/spdlog.h>
 
 namespace detect {
@@ -26,35 +25,9 @@ cv::Mat preprocessForOcr(const cv::Mat& image) {
 }
 
 std::string extractText(const cv::Mat& image, const std::string& language) {
-    // Initialize Tesseract OCR
-    tesseract::TessBaseAPI tess;
-    if (tess.Init(nullptr, "eng")) {
-        spdlog::error("Could not initialize tesseract.");
-        return "";
-    }
-
-    // Preprocess the image
-    cv::Mat processed = preprocessForOcr(image);
-
-    // Set image data
-    tess.SetImage(processed.data, processed.cols, processed.rows,
-                  processed.channels(), processed.step);
-
-    // Set OCR parameters suitable for card text
-    tess.SetPageSegMode(tesseract::PSM_SINGLE_LINE); // Assume text is in a single line
-    tess.SetVariable("tessedit_char_whitelist", 
-                    "ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789-',."); 
-
-    // Get OCR result
-    std::string result = {tess.GetUTF8Text()};
-    // Clean up
-    tess.End();
-
-    // Trim whitespace
-    result.erase(0, result.find_first_not_of(" \n\r\t"));
-    result.erase(result.find_last_not_of(" \n\r\t") + 1);
-
-    return result;
+    // TODO: Implement OCR functionality - currently disabled due to Tesseract removal
+    spdlog::warn("OCR functionality temporarily disabled - Tesseract not available");
+    return "OCR_DISABLED";
 }
 
 } // namespace detect
