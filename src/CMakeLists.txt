@@ -1,5 +1,6 @@
 # Find the Conan-installed packages
 find_package(OpenCV REQUIRED)
+find_package(Tesseract REQUIRED)
 find_package(spdlog REQUIRED)
 find_package(libassert REQUIRED)
 find_package(Microsoft.GSL REQUIRED)

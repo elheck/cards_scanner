@@ -15,4 +15,5 @@ target_link_libraries(workflow_lib
     PRIVATE
         ${OpenCV_LIBS}
         libassert::assert
+        spdlog::spdlog
 )

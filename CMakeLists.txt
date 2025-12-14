@@ -88,6 +88,33 @@ elseif(EXISTS "${CMAKE_BINARY_DIR}/generators")
     list(APPEND CMAKE_PREFIX_PATH "${CMAKE_BINARY_DIR}/generators")
 endif()
 
+# Download Tesseract trained data if not present
+# Using tessdata_best for better accuracy (larger file, slower but more accurate)
+set(TESSDATA_DIR "${CMAKE_BINARY_DIR}/tessdata")
+set(TESSDATA_LANG "eng")
+set(TESSDATA_FILE "${TESSDATA_DIR}/${TESSDATA_LANG}.traineddata")
+
+if(NOT EXISTS "${TESSDATA_FILE}")
+    message(STATUS "Downloading Tesseract trained data (${TESSDATA_LANG}) - best quality...")
+    file(MAKE_DIRECTORY "${TESSDATA_DIR}")
+    file(DOWNLOAD
+        "https://github.com/tesseract-ocr/tessdata_best/raw/main/${TESSDATA_LANG}.traineddata"
+        "${TESSDATA_FILE}"
+        SHOW_PROGRESS
+        STATUS DOWNLOAD_STATUS
+    )
+    list(GET DOWNLOAD_STATUS 0 DOWNLOAD_RESULT)
+    if(NOT DOWNLOAD_RESULT EQUAL 0)
+        message(FATAL_ERROR "Failed to download Tesseract trained data: ${DOWNLOAD_STATUS}")
+    endif()
+    message(STATUS "Successfully downloaded ${TESSDATA_LANG}.traineddata (best quality)")
+else()
+    message(STATUS "Tesseract trained data already present: ${TESSDATA_FILE}")
+endif()
+
+# Set TESSDATA_PREFIX for runtime
+set(TESSDATA_PREFIX "${TESSDATA_DIR}" CACHE PATH "Path to Tesseract trained data")
+add_compile_definitions(TESSDATA_PREFIX="${TESSDATA_PREFIX}")
 
 # Add source directories
 add_subdirectory(src)

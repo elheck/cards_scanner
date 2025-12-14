@@ -20,5 +20,5 @@ target_link_libraries(card_processor_lib
         spdlog::spdlog
         libassert::assert
         Microsoft.GSL::GSL
-       # leptonica
+        Tesseract::libtesseract
 )
