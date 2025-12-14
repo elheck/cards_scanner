@@ -229,8 +229,7 @@ ScryfallClient::getCardByFuzzyName(const std::string &name) {
   return std::nullopt;
 }
 
-std::vector<CardInfo>
-ScryfallClient::searchCards(const std::string &query) {
+std::vector<CardInfo> ScryfallClient::searchCards(const std::string &query) {
   std::vector<CardInfo> results;
 
   if (query.empty()) {
@@ -284,12 +283,12 @@ std::string ScryfallClient::cardInfoToJson(const CardInfo &card) {
   j["mana_cost"] = card.manaCost;
   j["oracle_text"] = card.oracleText;
   j["image_uris"]["normal"] = card.imageUri;
-  j["prices"]["usd"] =
-      card.priceUsd > 0 ? nlohmann::json(std::to_string(card.priceUsd))
-                        : nlohmann::json(nullptr);
-  j["prices"]["eur"] =
-      card.priceEur > 0 ? nlohmann::json(std::to_string(card.priceEur))
-                        : nlohmann::json(nullptr);
+  j["prices"]["usd"] = card.priceUsd > 0
+                           ? nlohmann::json(std::to_string(card.priceUsd))
+                           : nlohmann::json(nullptr);
+  j["prices"]["eur"] = card.priceEur > 0
+                           ? nlohmann::json(std::to_string(card.priceEur))
+                           : nlohmann::json(nullptr);
   return j.dump(2);
 }
 

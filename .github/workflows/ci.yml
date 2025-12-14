@@ -15,6 +15,8 @@ jobs:
 
     - name: Set up Docker Buildx
       uses: docker/setup-buildx-action@v3
+      with:
+        driver: docker-container
 
     - name: Cache Docker layers
       uses: actions/cache@v4
@@ -31,14 +33,17 @@ jobs:
         restore-keys: ${{ runner.os }}-conan-
 
     - name: Build devcontainer image
+      uses: docker/build-push-action@v5
+      with:
+        context: .
+        file: .devcontainer/Dockerfile
+        tags: card-scanner-dev:latest
+        load: true
+        cache-from: type=local,src=/tmp/.buildx-cache
+        cache-to: type=local,dest=/tmp/.buildx-cache-new,mode=max
+
+    - name: Move cache
       run: |
-        docker build \
-          --cache-from type=local,src=/tmp/.buildx-cache \
-          --cache-to type=local,dest=/tmp/.buildx-cache-new,mode=max \
-          -t card-scanner-dev \
-          -f .devcontainer/Dockerfile \
-          .
-        # Move cache to avoid unbounded growth
         rm -rf /tmp/.buildx-cache
         mv /tmp/.buildx-cache-new /tmp/.buildx-cache
 
@@ -71,6 +76,8 @@ jobs:
 
     - name: Set up Docker Buildx
       uses: docker/setup-buildx-action@v3
+      with:
+        driver: docker-container
 
     - name: Cache Docker layers
       uses: actions/cache@v4
@@ -87,12 +94,13 @@ jobs:
         restore-keys: ${{ runner.os }}-conan-
 
     - name: Build devcontainer image
-      run: |
-        docker build \
-          --cache-from type=local,src=/tmp/.buildx-cache \
-          -t card-scanner-dev \
-          -f .devcontainer/Dockerfile \
-          .
+      uses: docker/build-push-action@v5
+      with:
+        context: .
+        file: .devcontainer/Dockerfile
+        tags: card-scanner-dev:latest
+        load: true
+        cache-from: type=local,src=/tmp/.buildx-cache
 
     - name: Check lock drift
       run: |
