@@ -90,8 +90,9 @@ void DetectionWorkflow::readTextFromRegions() {
 void DetectionWorkflow::lookupCardInfo() {
   // Try to look up card info from Scryfall using collector number + set code
   if (!setName_.empty() && !collectorNumber_.empty()) {
-    cardInfo_ = scryfallClient_.getCardByCollectorNumber(setName_, collectorNumber_);
-    
+    cardInfo_ =
+        scryfallClient_.getCardByCollectorNumber(setName_, collectorNumber_);
+
     if (cardInfo_ && cardInfo_->isValid) {
       spdlog::info("=== Card Identified ===");
       spdlog::info("Name: {}", cardInfo_->name);
@@ -105,12 +106,12 @@ void DetectionWorkflow::lookupCardInfo() {
       return;
     }
   }
-  
+
   // Fallback: try fuzzy name search
   if (!cardName_.empty()) {
     spdlog::info("Collector number lookup failed, trying fuzzy name search...");
     cardInfo_ = scryfallClient_.getCardByFuzzyName(cardName_);
-    
+
     if (cardInfo_ && cardInfo_->isValid) {
       spdlog::info("=== Card Identified (by name) ===");
       spdlog::info("Name: {}", cardInfo_->name);
@@ -122,7 +123,7 @@ void DetectionWorkflow::lookupCardInfo() {
       return;
     }
   }
-  
+
   spdlog::warn("Could not identify card via Scryfall API");
 }
 } // namespace workflow

@@ -1,7 +1,7 @@
 #pragma once
 
-#include <scryfall_client.hpp>
 #include <opencv2/opencv.hpp>
+#include <scryfall_client.hpp>
 
 #include <filesystem>
 #include <optional>
