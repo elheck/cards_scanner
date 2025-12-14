@@ -91,5 +91,6 @@ endif()
 
 # Add source directories
 add_subdirectory(src)
-# Add the test subdirectory
+# Add the test subdirectories
 add_subdirectory(tests/integration)
+add_subdirectory(tests/unit)

@@ -1,0 +1,77 @@
+{
+    "name": "Card Scanner Dev",
+    "build": {
+        "dockerfile": "Dockerfile",
+        "context": ".."
+    },
+    
+    // Mount the workspace
+    "workspaceMount": "source=${localWorkspaceFolder},target=/workspace,type=bind,consistency=cached",
+    "workspaceFolder": "/workspace",
+
+    // Features to add
+    "features": {
+        "ghcr.io/devcontainers/features/git:1": {},
+        "ghcr.io/devcontainers/features/github-cli:1": {}
+    },
+
+    // VS Code settings inside the container
+    "customizations": {
+        "vscode": {
+            "settings": {
+                "cmake.configureOnOpen": true,
+                "cmake.generator": "Ninja",
+                "cmake.buildDirectory": "${workspaceFolder}/build",
+                "C_Cpp.default.configurationProvider": "ms-vscode.cmake-tools",
+                "C_Cpp.clang_format_style": "file",
+                "editor.formatOnSave": true,
+                "files.associations": {
+                    "*.hpp": "cpp",
+                    "*.cpp": "cpp"
+                },
+                "terminal.integrated.defaultProfile.linux": "bash"
+            },
+            "extensions": [
+                // C++ development
+                "ms-vscode.cpptools",
+                "ms-vscode.cpptools-extension-pack",
+                "ms-vscode.cmake-tools",
+                "twxs.cmake",
+                // Code quality
+                "xaver.clang-format",
+                "notskm.clang-tidy",
+                // Git
+                "eamodio.gitlens",
+                "mhutchie.git-graph",
+                // Utilities
+                "ms-azuretools.vscode-docker",
+                "GitHub.copilot",
+                "yzhang.markdown-all-in-one",
+                // Testing
+                "matepek.vscode-catch2-test-adapter"
+            ]
+        }
+    },
+
+    // Run commands after container is created
+    "postCreateCommand": "conan profile detect --force && echo 'Dev container ready!'",
+
+    // Run commands after container starts
+    "postStartCommand": "echo 'Run ./rebuild.sh to build the project'",
+
+    // Forward ports if needed (e.g., for debugging)
+    "forwardPorts": [],
+
+    // Use the vscode user
+    "remoteUser": "vscode",
+
+    // Environment variables
+    "containerEnv": {
+        "CONAN_HOME": "/home/vscode/.conan2"
+    },
+
+    // Mounts for Conan cache persistence
+    "mounts": [
+        "source=card-scanner-conan-cache,target=/home/vscode/.conan2,type=volume"
+    ]
+}

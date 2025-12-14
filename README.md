@@ -236,7 +236,46 @@ cards_scanner/
 | **C++ Compiler** | C++17 | GCC/Clang with C++17 support |
 | **clang-tidy** | Latest | Static analysis |
 
-### Installing Build Tools
+---
+
+## Development Setup
+
+### Option 1: Dev Container (Recommended)
+
+The easiest way to develop is using VS Code Dev Containers. This provides a fully configured development environment in Docker without installing dependencies on your system.
+
+**Prerequisites:**
+- [Docker](https://docs.docker.com/get-docker/) installed and running
+- [VS Code](https://code.visualstudio.com/) with the [Dev Containers extension](https://marketplace.visualstudio.com/items?itemName=ms-vscode-remote.remote-containers)
+
+**Getting Started:**
+
+1. Open the project in VS Code
+2. Press `F1` and select **"Dev Containers: Reopen in Container"**
+3. Wait for the container to build (first time takes a few minutes)
+4. Once ready, build the project:
+   ```bash
+   ./rebuild.sh
+   ```
+
+**What's Included:**
+- Ubuntu 22.04 base
+- CMake, Ninja, GCC
+- Conan 2.x (pre-configured)
+- clang-tidy, clang-format
+- OpenCV and Tesseract system libraries
+- VS Code extensions for C++ development
+- Persistent Conan cache (survives container rebuilds)
+
+**Dev Container Features:**
+- IntelliSense and code completion
+- Integrated debugging
+- CMake Tools integration
+- Automatic formatting on save
+
+### Option 2: Native Installation
+
+If you prefer to install dependencies directly on your system:
 
 ```bash
 # Install Conan
