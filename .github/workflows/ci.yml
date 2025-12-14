@@ -55,7 +55,7 @@ jobs:
           -w /workspace \
           -u vscode \
           card-scanner-dev \
-          bash -c "chmod +x ./rebuild.sh && ./rebuild.sh"
+          bash ./rebuild.sh
 
     - name: Run quality checks
       run: |
@@ -65,7 +65,7 @@ jobs:
           -w /workspace \
           -u vscode \
           card-scanner-dev \
-          bash -c "chmod +x ./run_quality_tests.sh && ./run_quality_tests.sh"
+          bash ./run_quality_tests.sh
 
   lock-drift:
     runs-on: ubuntu-latest
