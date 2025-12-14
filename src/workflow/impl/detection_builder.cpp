@@ -2,6 +2,7 @@
 #include <card_text_ocr.hpp>
 #include <detection_builder.hpp>
 #include <region_extraction.hpp>
+#include <scryfall_client.hpp>
 #include <tilt_corrector.hpp>
 
 #include <libassert/assert.hpp>
@@ -18,7 +19,7 @@ cv::Mat DetectionWorkflow::process(const std::filesystem::path &imagePath) {
   case CardType::modernNormal:
     result = processModernNormal(imagePath);
     readTextFromRegions();
-
+    lookupCardInfo();
     break;
   default:
     throw std::runtime_error("Unsupported card type");
@@ -84,5 +85,44 @@ void DetectionWorkflow::readTextFromRegions() {
     setName_ = detect::extractSetCode(setNameImage_);
     spdlog::info("Extracted set name: {}", setName_);
   }
+}
+
+void DetectionWorkflow::lookupCardInfo() {
+  // Try to look up card info from Scryfall using collector number + set code
+  if (!setName_.empty() && !collectorNumber_.empty()) {
+    cardInfo_ = scryfallClient_.getCardByCollectorNumber(setName_, collectorNumber_);
+    
+    if (cardInfo_ && cardInfo_->isValid) {
+      spdlog::info("=== Card Identified ===");
+      spdlog::info("Name: {}", cardInfo_->name);
+      spdlog::info("Set: {} ({})", cardInfo_->setName, cardInfo_->setCode);
+      spdlog::info("Collector #: {}", cardInfo_->collectorNumber);
+      spdlog::info("Type: {}", cardInfo_->typeLine);
+      spdlog::info("Rarity: {}", cardInfo_->rarity);
+      if (cardInfo_->priceUsd > 0) {
+        spdlog::info("Price: ${:.2f} USD", cardInfo_->priceUsd);
+      }
+      return;
+    }
+  }
+  
+  // Fallback: try fuzzy name search
+  if (!cardName_.empty()) {
+    spdlog::info("Collector number lookup failed, trying fuzzy name search...");
+    cardInfo_ = scryfallClient_.getCardByFuzzyName(cardName_);
+    
+    if (cardInfo_ && cardInfo_->isValid) {
+      spdlog::info("=== Card Identified (by name) ===");
+      spdlog::info("Name: {}", cardInfo_->name);
+      spdlog::info("Set: {} ({})", cardInfo_->setName, cardInfo_->setCode);
+      spdlog::info("Type: {}", cardInfo_->typeLine);
+      if (cardInfo_->priceUsd > 0) {
+        spdlog::info("Price: ${:.2f} USD", cardInfo_->priceUsd);
+      }
+      return;
+    }
+  }
+  
+  spdlog::warn("Could not identify card via Scryfall API");
 }
 } // namespace workflow

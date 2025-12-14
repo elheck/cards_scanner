@@ -12,6 +12,7 @@ target_include_directories(workflow_lib
 target_link_libraries(workflow_lib
     PUBLIC
         card_processor_lib
+        api_lib
     PRIVATE
         ${OpenCV_LIBS}
         libassert::assert

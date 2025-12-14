@@ -183,6 +183,19 @@ std::string extractCollectorNumber(const cv::Mat &image,
     }
   }
 
+  // Collector numbers are exactly 3 digits (take last 3)
+  if (digits.length() > 3) {
+    digits = digits.substr(digits.length() - 3);
+  }
+
+  // Remove leading zeros (Scryfall uses numbers without leading zeros)
+  size_t firstNonZero = digits.find_first_not_of('0');
+  if (firstNonZero != std::string::npos) {
+    digits = digits.substr(firstNonZero);
+  } else if (!digits.empty()) {
+    digits = "0"; // Handle "000" case
+  }
+
   tess->End();
   return digits;
 }

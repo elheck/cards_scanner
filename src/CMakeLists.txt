@@ -8,6 +8,7 @@ find_package(Microsoft.GSL REQUIRED)
 # Add the library subdirectories
 add_subdirectory(misc)
 add_subdirectory(detection)
+add_subdirectory(api)
 add_subdirectory(workflow)
 
 # Add executable
@@ -25,6 +26,7 @@ target_include_directories(card_scanner
 target_link_libraries(card_scanner 
     PRIVATE
         workflow_lib
+        api_lib
         misc_lib
         spdlog::spdlog
         libassert::assert
