@@ -53,8 +53,8 @@ public:
 
   /// Search for cards matching a query (not cached)
   /// Example: searchCards("set:dsc type:artifact")
-  [[nodiscard]] std::vector<CardInfo>
-  searchCards(const std::string &query) const;
+  [[nodiscard]] static std::vector<CardInfo>
+  searchCards(const std::string &query);
 
   /// Clear all cached data
   void clearCache();
@@ -64,16 +64,16 @@ public:
   [[nodiscard]] size_t getCacheMisses() const { return cacheMisses_; }
 
 private:
-  [[nodiscard]] std::string httpGet(const std::string &url) const;
-  [[nodiscard]] CardInfo parseCardJson(const std::string &json) const;
-  [[nodiscard]] std::string urlEncode(const std::string &str) const;
+  [[nodiscard]] static std::string httpGet(const std::string &url);
+  [[nodiscard]] static CardInfo parseCardJson(const std::string &json);
+  [[nodiscard]] static std::string urlEncode(const std::string &str);
 
   // Cache methods
   [[nodiscard]] std::optional<CardInfo> getFromCache(const std::string &key);
   void saveToCache(const std::string &key, const CardInfo &card);
   [[nodiscard]] std::filesystem::path
   getCacheFilePath(const std::string &key) const;
-  [[nodiscard]] std::string cardInfoToJson(const CardInfo &card) const;
+  [[nodiscard]] static std::string cardInfoToJson(const CardInfo &card);
 
   std::filesystem::path cacheDir_;
   std::unordered_map<std::string, CardInfo> memoryCache_;

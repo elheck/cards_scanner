@@ -30,9 +30,9 @@ cv::Mat preprocessForOcr(const cv::Mat &image) {
 
   // Invert if the text appears to be light on dark background
   // (check if more than 50% of pixels are dark)
-  int nonZeroCount = cv::countNonZero(processed);
-  int totalPixels = processed.rows * processed.cols;
-  if (nonZeroCount < totalPixels / 2) {
+  int non_zero_count = cv::countNonZero(processed);
+  int total_pixels = processed.rows * processed.cols;
+  if (non_zero_count < total_pixels / 2) {
     cv::bitwise_not(processed, processed);
   }
 
@@ -54,12 +54,12 @@ std::string extractText(const cv::Mat &image, const std::string &language) {
 
   // Initialize Tesseract with tessdata path from build configuration
 #ifdef TESSDATA_PREFIX
-  const char *tessdataPath = TESSDATA_PREFIX;
+  const char *tessdata_path = TESSDATA_PREFIX;
 #else
-  const char *tessdataPath = nullptr;
+  const char *tessdata_path = nullptr;
 #endif
   auto tess = std::make_unique<tesseract::TessBaseAPI>();
-  if (tess->Init(tessdataPath, language.c_str()) != 0) {
+  if (tess->Init(tessdata_path, language.c_str()) != 0) {
     spdlog::error("Failed to initialize Tesseract with language: {}", language);
     return "";
   }
@@ -79,8 +79,9 @@ std::string extractText(const cv::Mat &image, const std::string &language) {
                  static_cast<int>(processed.step));
 
   // Extract text
-  std::unique_ptr<char[]> outText(tess->GetUTF8Text());
-  std::string result = outText ? std::string(outText.get()) : "";
+  std::unique_ptr<char, decltype(&std::free)> out_text(tess->GetUTF8Text(),
+                                                       &std::free);
+  std::string result = out_text ? std::string(out_text.get()) : "";
 
   // Trim whitespace
   auto start = result.find_first_not_of(" \t\n\r");
@@ -93,9 +94,9 @@ std::string extractText(const cv::Mat &image, const std::string &language) {
 
   // Remove trailing non-letter/non-space characters (artifacts like "- j j")
   while (!result.empty()) {
-    char lastChar = result.back();
-    if (!std::isalpha(static_cast<unsigned char>(lastChar)) &&
-        lastChar != ' ' && lastChar != '\'') {
+    char last_char = result.back();
+    if (std::isalpha(static_cast<unsigned char>(last_char)) == 0 &&
+        last_char != ' ' && last_char != '\'') {
       result.pop_back();
     } else {
       break;
@@ -107,7 +108,7 @@ std::string extractText(const cv::Mat &image, const std::string &language) {
   }
   // Remove trailing single characters (likely noise)
   while (result.size() >= 2 && result[result.size() - 2] == ' ' &&
-         std::isalpha(static_cast<unsigned char>(result.back()))) {
+         std::isalpha(static_cast<unsigned char>(result.back())) != 0) {
     result.pop_back();
     result.pop_back();
   }
@@ -147,19 +148,19 @@ std::string extractCollectorNumber(const cv::Mat &image,
                 cv::THRESH_BINARY | cv::THRESH_OTSU);
 
   // Auto-invert if needed
-  int nonZeroCount = cv::countNonZero(processed);
-  int totalPixels = processed.rows * processed.cols;
-  if (nonZeroCount < totalPixels / 2) {
+  int non_zero_count = cv::countNonZero(processed);
+  int total_pixels = processed.rows * processed.cols;
+  if (non_zero_count < total_pixels / 2) {
     cv::bitwise_not(processed, processed);
   }
 
 #ifdef TESSDATA_PREFIX
-  const char *tessdataPath = TESSDATA_PREFIX;
+  const char *tessdata_path = TESSDATA_PREFIX;
 #else
-  const char *tessdataPath = nullptr;
+  const char *tessdata_path = nullptr;
 #endif
   auto tess = std::make_unique<tesseract::TessBaseAPI>();
-  if (tess->Init(tessdataPath, language.c_str()) != 0) {
+  if (tess->Init(tessdata_path, language.c_str()) != 0) {
     return "";
   }
 
@@ -172,8 +173,9 @@ std::string extractCollectorNumber(const cv::Mat &image,
   tess->SetImage(processed.data, processed.cols, processed.rows, 1,
                  static_cast<int>(processed.step));
 
-  std::unique_ptr<char[]> outText(tess->GetUTF8Text());
-  std::string result = outText ? std::string(outText.get()) : "";
+  std::unique_ptr<char, decltype(&std::free)> out_text(tess->GetUTF8Text(),
+                                                       &std::free);
+  std::string result = out_text ? std::string(out_text.get()) : "";
 
   // Keep only digits
   std::string digits;
@@ -189,9 +191,9 @@ std::string extractCollectorNumber(const cv::Mat &image,
   }
 
   // Remove leading zeros (Scryfall uses numbers without leading zeros)
-  size_t firstNonZero = digits.find_first_not_of('0');
-  if (firstNonZero != std::string::npos) {
-    digits = digits.substr(firstNonZero);
+  size_t first_non_zero = digits.find_first_not_of('0');
+  if (first_non_zero != std::string::npos) {
+    digits = digits.substr(first_non_zero);
   } else if (!digits.empty()) {
     digits = "0"; // Handle "000" case
   }
@@ -226,19 +228,19 @@ std::string extractSetCode(const cv::Mat &image, const std::string &language) {
                 cv::THRESH_BINARY | cv::THRESH_OTSU);
 
   // Auto-invert if needed (text should be dark on light)
-  int nonZeroCount = cv::countNonZero(processed);
-  int totalPixels = processed.rows * processed.cols;
-  if (nonZeroCount < totalPixels / 2) {
+  int non_zero_count = cv::countNonZero(processed);
+  int total_pixels = processed.rows * processed.cols;
+  if (non_zero_count < total_pixels / 2) {
     cv::bitwise_not(processed, processed);
   }
 
 #ifdef TESSDATA_PREFIX
-  const char *tessdataPath = TESSDATA_PREFIX;
+  const char *tessdata_path = TESSDATA_PREFIX;
 #else
-  const char *tessdataPath = nullptr;
+  const char *tessdata_path = nullptr;
 #endif
   auto tess = std::make_unique<tesseract::TessBaseAPI>();
-  if (tess->Init(tessdataPath, language.c_str()) != 0) {
+  if (tess->Init(tessdata_path, language.c_str()) != 0) {
     return "";
   }
 
@@ -251,19 +253,20 @@ std::string extractSetCode(const cv::Mat &image, const std::string &language) {
   tess->SetImage(processed.data, processed.cols, processed.rows, 1,
                  static_cast<int>(processed.step));
 
-  std::unique_ptr<char[]> outText(tess->GetUTF8Text());
-  std::string result = outText ? std::string(outText.get()) : "";
+  std::unique_ptr<char, decltype(&std::free)> out_text(tess->GetUTF8Text(),
+                                                       &std::free);
+  std::string result = out_text ? std::string(out_text.get()) : "";
 
   // Keep only uppercase letters, limit to exactly 3 chars for set code
-  std::string setCode;
+  std::string set_code;
   for (char c : result) {
-    if (c >= 'A' && c <= 'Z' && setCode.length() < 3) {
-      setCode += c;
+    if (c >= 'A' && c <= 'Z' && set_code.length() < 3) {
+      set_code += c;
     }
   }
 
   tess->End();
-  return setCode;
+  return set_code;
 }
 
 } // namespace detect
