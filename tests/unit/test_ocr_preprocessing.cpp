@@ -48,13 +48,13 @@ TEST_F(OcrPreprocessingTest, GrayscaleInputRemainsGrayscale) {
 
 // ============== Scaling Tests ==============
 
-TEST_F(OcrPreprocessingTest, OutputIsScaled2x) {
+TEST_F(OcrPreprocessingTest, OutputIsScaled3x) {
   cv::Mat image = createColorImage(100, 50);
   cv::Mat processed = detect::preprocessForOcr(image);
 
-  // Image should be scaled 2x in both dimensions
-  EXPECT_EQ(processed.cols, image.cols * 2) << "Width should be doubled";
-  EXPECT_EQ(processed.rows, image.rows * 2) << "Height should be doubled";
+  // Image should be scaled 3x in both dimensions for better OCR
+  EXPECT_EQ(processed.cols, image.cols * 3) << "Width should be tripled";
+  EXPECT_EQ(processed.rows, image.rows * 3) << "Height should be tripled";
 }
 
 TEST_F(OcrPreprocessingTest, ScalingWorksWithDifferentSizes) {
@@ -66,9 +66,9 @@ TEST_F(OcrPreprocessingTest, ScalingWorksWithDifferentSizes) {
     cv::Mat image = createColorImage(width, height);
     cv::Mat processed = detect::preprocessForOcr(image);
 
-    EXPECT_EQ(processed.cols, width * 2)
+    EXPECT_EQ(processed.cols, width * 3)
         << "Width scaling failed for " << width << "x" << height;
-    EXPECT_EQ(processed.rows, height * 2)
+    EXPECT_EQ(processed.rows, height * 3)
         << "Height scaling failed for " << width << "x" << height;
   }
 }
@@ -172,8 +172,9 @@ TEST_F(OcrPreprocessingTest, HandlesSmallImage) {
   cv::Mat processed = detect::preprocessForOcr(tinyImage);
 
   EXPECT_FALSE(processed.empty()) << "Should handle very small images";
-  EXPECT_EQ(processed.cols, 20);
-  EXPECT_EQ(processed.rows, 10);
+  // 3x scaling: 10x5 -> 30x15
+  EXPECT_EQ(processed.cols, 30);
+  EXPECT_EQ(processed.rows, 15);
 }
 
 // ============== Text Preservation Tests ==============

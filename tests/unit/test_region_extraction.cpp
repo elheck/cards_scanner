@@ -134,9 +134,10 @@ TEST_F(RegionExtractionTest, SetNameRegionCorrectSize) {
   cv::Mat card = createTestCard();
   cv::Rect setRegion = detect::extractSetNameRegionModern(card);
 
-  // Expected: ~10% width, ~2.5% height
-  int expectedWidth = static_cast<int>(cardWidth * 0.10);
-  int expectedHeight = static_cast<int>(cardHeight * 0.025);
+  // Expected: ~12% width, ~3.5% height (matching region_extraction.cpp
+  // constants)
+  int expectedWidth = static_cast<int>(cardWidth * 0.12);
+  int expectedHeight = static_cast<int>(cardHeight * 0.035);
 
   EXPECT_EQ(setRegion.width, expectedWidth);
   EXPECT_EQ(setRegion.height, expectedHeight);
