@@ -31,8 +31,9 @@ struct CardInfo {
 class ScryfallClient {
 public:
   /// Constructor with optional cache directory
-  /// @param cacheDir Directory to store cached responses (default: ~/.cache/mtg_scanner)
-  explicit ScryfallClient(const std::filesystem::path& cacheDir = "");
+  /// @param cacheDir Directory to store cached responses (default:
+  /// ~/.cache/mtg_scanner)
+  explicit ScryfallClient(const std::filesystem::path &cacheDir = "");
   ~ScryfallClient();
 
   // Non-copyable
@@ -68,10 +69,11 @@ private:
   [[nodiscard]] std::string urlEncode(const std::string &str) const;
 
   // Cache methods
-  [[nodiscard]] std::optional<CardInfo> getFromCache(const std::string& key);
-  void saveToCache(const std::string& key, const CardInfo& card);
-  [[nodiscard]] std::filesystem::path getCacheFilePath(const std::string& key) const;
-  [[nodiscard]] std::string cardInfoToJson(const CardInfo& card) const;
+  [[nodiscard]] std::optional<CardInfo> getFromCache(const std::string &key);
+  void saveToCache(const std::string &key, const CardInfo &card);
+  [[nodiscard]] std::filesystem::path
+  getCacheFilePath(const std::string &key) const;
+  [[nodiscard]] std::string cardInfoToJson(const CardInfo &card) const;
 
   std::filesystem::path cacheDir_;
   std::unordered_map<std::string, CardInfo> memoryCache_;

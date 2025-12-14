@@ -21,7 +21,7 @@ size_t writeCallback(void *contents, size_t size, size_t nmemb,
 }
 
 std::string getDefaultCacheDir() {
-  const char* home = std::getenv("HOME");
+  const char *home = std::getenv("HOME");
   if (home) {
     return std::string(home) + "/.cache/mtg_scanner";
   }
@@ -29,10 +29,11 @@ std::string getDefaultCacheDir() {
 }
 } // namespace
 
-ScryfallClient::ScryfallClient(const std::filesystem::path& cacheDir) 
-    : cacheDir_(cacheDir.empty() ? std::filesystem::path(getDefaultCacheDir()) : cacheDir) {
+ScryfallClient::ScryfallClient(const std::filesystem::path &cacheDir)
+    : cacheDir_(cacheDir.empty() ? std::filesystem::path(getDefaultCacheDir())
+                                 : cacheDir) {
   curl_global_init(CURL_GLOBAL_DEFAULT);
-  
+
   // Create cache directory if it doesn't exist
   if (!std::filesystem::exists(cacheDir_)) {
     std::filesystem::create_directories(cacheDir_);
@@ -157,8 +158,9 @@ CardInfo ScryfallClient::parseCardJson(const std::string &json) const {
   return card;
 }
 
-std::optional<CardInfo> ScryfallClient::getCardByCollectorNumber(
-    const std::string &setCode, const std::string &collectorNumber) {
+std::optional<CardInfo>
+ScryfallClient::getCardByCollectorNumber(const std::string &setCode,
+                                         const std::string &collectorNumber) {
 
   if (setCode.empty() || collectorNumber.empty()) {
     return std::nullopt;
@@ -208,7 +210,7 @@ ScryfallClient::getCardByFuzzyName(const std::string &name) {
 
   // Normalize name for cache key (lowercase, no special chars)
   std::string normalizedName = name;
-  std::transform(normalizedName.begin(), normalizedName.end(), 
+  std::transform(normalizedName.begin(), normalizedName.end(),
                  normalizedName.begin(), ::tolower);
   std::string cacheKey = "name_" + normalizedName;
 
@@ -279,11 +281,12 @@ ScryfallClient::searchCards(const std::string &query) const {
 
 // Cache implementation
 
-std::filesystem::path ScryfallClient::getCacheFilePath(const std::string& key) const {
+std::filesystem::path
+ScryfallClient::getCacheFilePath(const std::string &key) const {
   return cacheDir_ / (key + ".json");
 }
 
-std::string ScryfallClient::cardInfoToJson(const CardInfo& card) const {
+std::string ScryfallClient::cardInfoToJson(const CardInfo &card) const {
   nlohmann::json j;
   j["id"] = card.id;
   j["name"] = card.name;
@@ -295,12 +298,14 @@ std::string ScryfallClient::cardInfoToJson(const CardInfo& card) const {
   j["mana_cost"] = card.manaCost;
   j["oracle_text"] = card.oracleText;
   j["image_uris"]["normal"] = card.imageUri;
-  j["prices"]["usd"] = card.priceUsd > 0 ? std::to_string(card.priceUsd) : nullptr;
-  j["prices"]["eur"] = card.priceEur > 0 ? std::to_string(card.priceEur) : nullptr;
+  j["prices"]["usd"] =
+      card.priceUsd > 0 ? std::to_string(card.priceUsd) : nullptr;
+  j["prices"]["eur"] =
+      card.priceEur > 0 ? std::to_string(card.priceEur) : nullptr;
   return j.dump(2);
 }
 
-std::optional<CardInfo> ScryfallClient::getFromCache(const std::string& key) {
+std::optional<CardInfo> ScryfallClient::getFromCache(const std::string &key) {
   // Check memory cache first
   auto it = memoryCache_.find(key);
   if (it != memoryCache_.end()) {
@@ -329,14 +334,15 @@ std::optional<CardInfo> ScryfallClient::getFromCache(const std::string& key) {
       memoryCache_[key] = card;
       return card;
     }
-  } catch (const std::exception& e) {
-    spdlog::debug("Failed to read cache file {}: {}", cachePath.string(), e.what());
+  } catch (const std::exception &e) {
+    spdlog::debug("Failed to read cache file {}: {}", cachePath.string(),
+                  e.what());
   }
 
   return std::nullopt;
 }
 
-void ScryfallClient::saveToCache(const std::string& key, const CardInfo& card) {
+void ScryfallClient::saveToCache(const std::string &key, const CardInfo &card) {
   // Save to memory cache
   memoryCache_[key] = card;
 
@@ -348,8 +354,9 @@ void ScryfallClient::saveToCache(const std::string& key, const CardInfo& card) {
       file << cardInfoToJson(card);
       spdlog::debug("Cached card to {}", cachePath.string());
     }
-  } catch (const std::exception& e) {
-    spdlog::warn("Failed to write cache file {}: {}", cachePath.string(), e.what());
+  } catch (const std::exception &e) {
+    spdlog::warn("Failed to write cache file {}: {}", cachePath.string(),
+                 e.what());
   }
 }
 
@@ -359,7 +366,7 @@ void ScryfallClient::clearCache() {
   cacheMisses_ = 0;
 
   if (std::filesystem::exists(cacheDir_)) {
-    for (const auto& entry : std::filesystem::directory_iterator(cacheDir_)) {
+    for (const auto &entry : std::filesystem::directory_iterator(cacheDir_)) {
       if (entry.path().extension() == ".json") {
         std::filesystem::remove(entry.path());
       }
