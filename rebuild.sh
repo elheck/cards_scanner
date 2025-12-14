@@ -29,9 +29,9 @@ fi
 echo "Creating build directory..."
 mkdir "$BUILD_DIR" && cd "$BUILD_DIR"
 
-# Run CMake to configure the project
+# Run CMake to configure the project with compile_commands.json for clang-tidy
 echo "Configuring the project with CMake..."
-cmake ..
+cmake -DCMAKE_EXPORT_COMPILE_COMMANDS=ON ..
 
 # Build the project with or without verbose output
 echo "Building the project..."

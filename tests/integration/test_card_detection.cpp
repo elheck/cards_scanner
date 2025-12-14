@@ -1,14 +1,13 @@
 #include <card_detector.hpp>
-#include <tilt_corrector.hpp>
-#include <pic_helper.hpp>
 #include <path_helper.hpp>
+#include <pic_helper.hpp>
+#include <tilt_corrector.hpp>
 
 #include <filesystem>
 #include <gtest/gtest.h>
 #include <opencv2/opencv.hpp>
 #include <spdlog/spdlog.h>
 #include <string>
-
 
 class CardDetectionTest : public ::testing::Test {
 protected:
@@ -26,7 +25,7 @@ TEST_F(CardDetectionTest, EndToEndCardProcessing) {
        std::filesystem::directory_iterator(misc::getSamplesPath())) {
     auto pic = detect::processCards(entry.path());
     EXPECT_FALSE(pic.empty()) << "Failed to process card from " << entry.path();
-    
+
     auto folder = misc::getTestSamplesPath() / "detection";
     EXPECT_TRUE(misc::saveImage(folder, pic));
   }
@@ -39,11 +38,11 @@ TEST_F(CardDetectionTest, CardDetectionAndTiltCorrection) {
        std::filesystem::directory_iterator(misc::getSamplesPath())) {
     auto pic = detect::processCards(entry.path());
     EXPECT_FALSE(pic.empty()) << "Failed to process card from " << entry.path();
-    
+
     // Correct tilt
     pic = detect::correctCardTilt(pic);
     EXPECT_FALSE(pic.empty()) << "Failed to correct tilt for " << entry.path();
-    
+
     // Save the processed image
     auto folder = misc::getTestSamplesPath() / "tilt_correction";
     EXPECT_TRUE(misc::saveImage(folder, pic));
