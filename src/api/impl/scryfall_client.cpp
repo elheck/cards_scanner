@@ -5,6 +5,7 @@
 
 #include <algorithm>
 #include <cctype>
+#include <fstream>
 #include <iomanip>
 #include <sstream>
 
@@ -18,9 +19,26 @@ size_t writeCallback(void *contents, size_t size, size_t nmemb,
   userp->append(static_cast<char *>(contents), totalSize);
   return totalSize;
 }
+
+std::string getDefaultCacheDir() {
+  const char* home = std::getenv("HOME");
+  if (home) {
+    return std::string(home) + "/.cache/mtg_scanner";
+  }
+  return "./.mtg_cache";
+}
 } // namespace
 
-ScryfallClient::ScryfallClient() { curl_global_init(CURL_GLOBAL_DEFAULT); }
+ScryfallClient::ScryfallClient(const std::filesystem::path& cacheDir) 
+    : cacheDir_(cacheDir.empty() ? std::filesystem::path(getDefaultCacheDir()) : cacheDir) {
+  curl_global_init(CURL_GLOBAL_DEFAULT);
+  
+  // Create cache directory if it doesn't exist
+  if (!std::filesystem::exists(cacheDir_)) {
+    std::filesystem::create_directories(cacheDir_);
+    spdlog::debug("Created cache directory: {}", cacheDir_.string());
+  }
+}
 
 ScryfallClient::~ScryfallClient() { curl_global_cleanup(); }
 
@@ -140,7 +158,7 @@ CardInfo ScryfallClient::parseCardJson(const std::string &json) const {
 }
 
 std::optional<CardInfo> ScryfallClient::getCardByCollectorNumber(
-    const std::string &setCode, const std::string &collectorNumber) const {
+    const std::string &setCode, const std::string &collectorNumber) {
 
   if (setCode.empty() || collectorNumber.empty()) {
     return std::nullopt;
@@ -150,6 +168,15 @@ std::optional<CardInfo> ScryfallClient::getCardByCollectorNumber(
   std::string lowerSetCode = setCode;
   std::transform(lowerSetCode.begin(), lowerSetCode.end(), lowerSetCode.begin(),
                  ::tolower);
+
+  // Check cache first
+  std::string cacheKey = "collector_" + lowerSetCode + "_" + collectorNumber;
+  if (auto cached = getFromCache(cacheKey)) {
+    spdlog::debug("Cache hit for {}/{}", lowerSetCode, collectorNumber);
+    ++cacheHits_;
+    return cached;
+  }
+  ++cacheMisses_;
 
   std::string url = std::string(BASE_URL) + "/cards/" +
                     urlEncode(lowerSetCode) + "/" + urlEncode(collectorNumber);
@@ -163,6 +190,7 @@ std::optional<CardInfo> ScryfallClient::getCardByCollectorNumber(
 
   CardInfo card = parseCardJson(response);
   if (card.isValid) {
+    saveToCache(cacheKey, card);
     spdlog::info("Found card: {} ({} #{})", card.name, card.setCode,
                  card.collectorNumber);
     return card;
@@ -172,11 +200,25 @@ std::optional<CardInfo> ScryfallClient::getCardByCollectorNumber(
 }
 
 std::optional<CardInfo>
-ScryfallClient::getCardByFuzzyName(const std::string &name) const {
+ScryfallClient::getCardByFuzzyName(const std::string &name) {
 
   if (name.empty()) {
     return std::nullopt;
   }
+
+  // Normalize name for cache key (lowercase, no special chars)
+  std::string normalizedName = name;
+  std::transform(normalizedName.begin(), normalizedName.end(), 
+                 normalizedName.begin(), ::tolower);
+  std::string cacheKey = "name_" + normalizedName;
+
+  // Check cache first
+  if (auto cached = getFromCache(cacheKey)) {
+    spdlog::debug("Cache hit for name: {}", name);
+    ++cacheHits_;
+    return cached;
+  }
+  ++cacheMisses_;
 
   std::string url =
       std::string(BASE_URL) + "/cards/named?fuzzy=" + urlEncode(name);
@@ -190,6 +232,7 @@ ScryfallClient::getCardByFuzzyName(const std::string &name) const {
 
   CardInfo card = parseCardJson(response);
   if (card.isValid) {
+    saveToCache(cacheKey, card);
     spdlog::info("Found card by name: {} ({} #{})", card.name, card.setCode,
                  card.collectorNumber);
     return card;
@@ -232,6 +275,97 @@ ScryfallClient::searchCards(const std::string &query) const {
   }
 
   return results;
+}
+
+// Cache implementation
+
+std::filesystem::path ScryfallClient::getCacheFilePath(const std::string& key) const {
+  return cacheDir_ / (key + ".json");
+}
+
+std::string ScryfallClient::cardInfoToJson(const CardInfo& card) const {
+  nlohmann::json j;
+  j["id"] = card.id;
+  j["name"] = card.name;
+  j["set"] = card.setCode;
+  j["set_name"] = card.setName;
+  j["collector_number"] = card.collectorNumber;
+  j["rarity"] = card.rarity;
+  j["type_line"] = card.typeLine;
+  j["mana_cost"] = card.manaCost;
+  j["oracle_text"] = card.oracleText;
+  j["image_uris"]["normal"] = card.imageUri;
+  j["prices"]["usd"] = card.priceUsd > 0 ? std::to_string(card.priceUsd) : nullptr;
+  j["prices"]["eur"] = card.priceEur > 0 ? std::to_string(card.priceEur) : nullptr;
+  return j.dump(2);
+}
+
+std::optional<CardInfo> ScryfallClient::getFromCache(const std::string& key) {
+  // Check memory cache first
+  auto it = memoryCache_.find(key);
+  if (it != memoryCache_.end()) {
+    return it->second;
+  }
+
+  // Check file cache
+  std::filesystem::path cachePath = getCacheFilePath(key);
+  if (!std::filesystem::exists(cachePath)) {
+    return std::nullopt;
+  }
+
+  try {
+    std::ifstream file(cachePath);
+    if (!file.is_open()) {
+      return std::nullopt;
+    }
+
+    std::stringstream buffer;
+    buffer << file.rdbuf();
+    std::string json = buffer.str();
+
+    CardInfo card = parseCardJson(json);
+    if (card.isValid) {
+      // Store in memory cache for faster subsequent access
+      memoryCache_[key] = card;
+      return card;
+    }
+  } catch (const std::exception& e) {
+    spdlog::debug("Failed to read cache file {}: {}", cachePath.string(), e.what());
+  }
+
+  return std::nullopt;
+}
+
+void ScryfallClient::saveToCache(const std::string& key, const CardInfo& card) {
+  // Save to memory cache
+  memoryCache_[key] = card;
+
+  // Save to file cache
+  std::filesystem::path cachePath = getCacheFilePath(key);
+  try {
+    std::ofstream file(cachePath);
+    if (file.is_open()) {
+      file << cardInfoToJson(card);
+      spdlog::debug("Cached card to {}", cachePath.string());
+    }
+  } catch (const std::exception& e) {
+    spdlog::warn("Failed to write cache file {}: {}", cachePath.string(), e.what());
+  }
+}
+
+void ScryfallClient::clearCache() {
+  memoryCache_.clear();
+  cacheHits_ = 0;
+  cacheMisses_ = 0;
+
+  if (std::filesystem::exists(cacheDir_)) {
+    for (const auto& entry : std::filesystem::directory_iterator(cacheDir_)) {
+      if (entry.path().extension() == ".json") {
+        std::filesystem::remove(entry.path());
+      }
+    }
+    spdlog::info("Cache cleared");
+  }
 }
 
 } // namespace api
