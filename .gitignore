@@ -35,5 +35,7 @@ build/*
 data/*
 
 ansible/inventory.ini
-
+test_samples
 venv
+
+models

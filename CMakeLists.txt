@@ -12,6 +12,15 @@ project(card_scanner
     DESCRIPTION "MTG Card Scanner with OpenCV"
 )
 
+# Define test samples directory relative to project root
+set(TEST_SAMPLES_FOLDER "${CMAKE_SOURCE_DIR}/tests/test_samples")
+
+# Add compile definitions for paths
+add_compile_definitions(
+    SAMPLE_DATA_FOLDER="${CMAKE_SOURCE_DIR}/tests/sample_cards"
+    TEST_SAMPLES_FOLDER="${TEST_SAMPLES_FOLDER}"
+)
+
 # Set C++ standard
 set(CMAKE_CXX_STANDARD 17)
 set(CMAKE_CXX_STANDARD_REQUIRED ON)
@@ -27,60 +36,60 @@ if(NOT EXISTS "${CMAKE_BINARY_DIR}/conan.cmake")
 endif()
 include(${CMAKE_BINARY_DIR}/conan.cmake)
 
-# Configure Conan for version 2.x
-conan_cmake_configure(
-    REQUIRES 
-        gtest/1.13.0
-    OPTIONS 
-    GENERATORS CMakeDeps
-)
+# Use root conanfile.txt (and optional lockfile) instead of inline REQUIRES list.
+# Prefer architecture-specific lockfile (conan-<arch>.lock) if available.
+set(_ARCH_HINT "")
+if(CMAKE_SYSTEM_PROCESSOR)
+    string(TOLOWER "${CMAKE_SYSTEM_PROCESSOR}" _ARCH_HINT)
+endif()
+if(DEFINED CMAKE_HOST_SYSTEM_PROCESSOR AND NOT _ARCH_HINT)
+    string(TOLOWER "${CMAKE_HOST_SYSTEM_PROCESSOR}" _ARCH_HINT)
+endif()
+
+set(_CANDIDATE_LOCKFILES)
+if(_ARCH_HINT MATCHES "arm64|aarch64")
+    list(APPEND _CANDIDATE_LOCKFILES "${CMAKE_SOURCE_DIR}/conan-armv8.lock")
+endif()
+if(_ARCH_HINT MATCHES "x86_64|amd64")
+    list(APPEND _CANDIDATE_LOCKFILES "${CMAKE_SOURCE_DIR}/conan-x86_64.lock")
+endif()
+
+foreach(lockfile IN LISTS _CANDIDATE_LOCKFILES)
+    if(NOT CONAN_LOCKFILE AND EXISTS "${lockfile}")
+        set(CONAN_LOCKFILE "${lockfile}")
+    endif()
+endforeach()
+
+if(CONAN_LOCKFILE)
+    message(STATUS "Using Conan lockfile: ${CONAN_LOCKFILE}")
+else()
+    message(WARNING "No Conan lockfile found (expected one of: ${_CANDIDATE_LOCKFILES}). Proceeding unlocked.")
+endif()
 
 # Install dependencies
 conan_cmake_autodetect(settings)
 
-conan_cmake_install(
-    PATH_OR_REFERENCE .
+set(_conan_install_args
+    PATH_OR_REFERENCE "${CMAKE_SOURCE_DIR}"  # root with conanfile.txt
     BUILD missing
     SETTINGS ${settings}
 )
+if(CONAN_LOCKFILE)
+    list(APPEND _conan_install_args LOCKFILE "${CONAN_LOCKFILE}")
+endif()
+conan_cmake_install(${_conan_install_args})
 
 # Add the directory where Conan places the CMake configuration files to CMAKE_PREFIX_PATH
 list(APPEND CMAKE_PREFIX_PATH "${CMAKE_BINARY_DIR}")
+set(_CONAN_GEN_DIR "${CMAKE_BINARY_DIR}/${CMAKE_BUILD_TYPE}/generators")
+if(EXISTS "${_CONAN_GEN_DIR}")
+    list(APPEND CMAKE_PREFIX_PATH "${_CONAN_GEN_DIR}")
+elseif(EXISTS "${CMAKE_BINARY_DIR}/generators")
+    list(APPEND CMAKE_PREFIX_PATH "${CMAKE_BINARY_DIR}/generators")
+endif()
 
-# Find the Conan-installed packages
-find_package(OpenCV REQUIRED)
-find_package(GTest CONFIG REQUIRED)
 
-# Define the core library
-add_library(card_processor
-    src/detection/card_detector.cpp
-    src/detection/tilt_corrector.cpp
-    src/misc/pic_helper.cpp
-)
-
-# Include directories for the core library
-target_include_directories(card_processor 
-    PUBLIC
-        ${CMAKE_SOURCE_DIR}/include
-    PRIVATE
-        ${OpenCV_INCLUDE_DIRS} 
-)
-
-# Link libraries for the core library
-target_link_libraries(card_processor 
-    PRIVATE
-        ${OpenCV_LIBS}
-)
-
-# Add executable
-add_executable(card_scanner
-    src/main.cpp
-)
-
-# Link the executable with the core library
-target_link_libraries(card_scanner PRIVATE
-    card_processor
-)
-
+# Add source directories
+add_subdirectory(src)
 # Add the test subdirectory
 add_subdirectory(tests/integration)

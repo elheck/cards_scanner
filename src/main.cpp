@@ -1,63 +1,83 @@
-#include <detection/card_detector.hpp>
-#include <misc/pic_helper.hpp>
+#include <detection_builder.hpp>
+#include <pic_helper.hpp>
+#include <path_helper.hpp>
+
+#include <spdlog/spdlog.h>
+#include <libassert/assert.hpp>
+#include <gsl/span>
 
 #include <iostream>
 #include <string>
 
-using namespace detect;
-
-void printUsage(const char *programName) {
-  std::cout << "Usage: " << programName << " [options]" << std::endl;
-  std::cout << "Options:" << std::endl;
-  std::cout << "  -f, --file <path>    Process a card from an image file"
-            << std::endl;
-  std::cout << "  -h, --help           Show this help message" << std::endl;
+void printUsage(std::string_view programName) {
+    spdlog::info("Usage: {} [options]", programName);
+    spdlog::info("Options:");
+    spdlog::info("  -f, --file <path>    Process a card from an image file");
+    spdlog::info("  -h, --help           Show this help message");
 }
 
 int main(int argc, char *argv[]) {
-  std::string imagePath;
+    const gsl::span args{argv, static_cast<std::size_t>(argc)};
+    std::filesystem::path image_path;
+    
+    ASSERT(args.size() > 1, "No arguments given", args.size());
 
-  // Parse command line arguments
-  for (int i = 1; i < argc; i++) {
-    std::string arg = argv[i];
+    // Parse command line arguments
+    for (size_t i = 1; i < args.size(); ++i) {
+        std::string_view arg{args[i]};
 
-    if (arg == "-h" || arg == "--help") {
-      printUsage(argv[0]);
-      return 0;
-    } else if (arg == "-f" || arg == "--file") {
-      if (i + 1 < argc) {
-        imagePath = argv[++i];
-      } else {
-        std::cerr << "Error: Missing file path" << std::endl;
-        printUsage(argv[0]);
+        if (arg == "-h" || arg == "--help") {
+            printUsage(args[0]);
+            return 0;
+        }
+        
+        if (arg == "-f" || arg == "--file") {
+            if (i + 1 >= args.size()) {
+                spdlog::critical("Error: Missing file path");
+                printUsage(args[0]);
+                return 1;
+            }
+            image_path = args[++i];
+            continue;
+        }
+
+        spdlog::critical("Error: Unknown option: {}", arg);
+        printUsage(args[0]);
         return 1;
-      }
-    } else {
-      std::cerr << "Error: Unknown option: " << arg << std::endl;
-      printUsage(argv[0]);
-      return 1;
     }
-  }
 
-  // Create a card processor
-  CardDetector processor;
+    // Check if image path is provided and exists
+    if (image_path.empty()) {
+        spdlog::critical("Error: No input file specified");
+        printUsage(args[0]);
+        return 1;
+    }
 
-  // Check if image path is provided
-  if (imagePath.empty()) {
-    std::cerr << "Error: No input file specified" << std::endl;
-    printUsage(argv[0]);
-    return 1;
-  }
+    if (!std::filesystem::exists(image_path)) {
+        spdlog::critical("Error: Input file does not exist: {}", image_path.string());
+        return 1;
+    }
 
-  // Load the image
-  if (!processor.loadImage(imagePath)) {
-    std::cerr << "Error: Failed to load image" << std::endl;
-    return 1;
-  }
+    try {
+        // Create a detection builder for modern normal cards
+        workflow::DetectionWorkflow builder(workflow::CardType::modernNormal);
+        
+        // Process the card using the builder
+        auto processed_card = builder.process(image_path);
 
-  auto processed_card = processor.processCards();
+        if (!misc::saveImage(misc::getTestSamplesPath(), processed_card, "test_out.jpg")) {
+            spdlog::critical("Error: Failed to save image");
+            return 1;
+        }
+        
+        spdlog::info("Processing completed successfully");
+    } catch (const std::runtime_error& e) {
+        spdlog::critical("Error processing card: {}", e.what());
+        return 1;
+    } catch (const std::exception& e) {
+        spdlog::critical("Unexpected error: {}", e.what());
+        return 1;
+    }
 
-  cs::displayResults(processed_card);
-
-  return 0;
+    return 0;
 }

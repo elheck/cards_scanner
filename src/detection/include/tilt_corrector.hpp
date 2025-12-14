@@ -4,6 +4,6 @@
 
 namespace detect {
 
-cv::Mat correctCardTilt(const cv::Mat &cardImage);
+    [[nodiscard]] cv::Mat correctCardTilt(const cv::Mat &cardImage);
 
 } // namespace detect

@@ -3,6 +3,3 @@
 
 - name: Install OpenCV dependencies
   ansible.builtin.import_playbook: plays/install_opencv_dependencies.yml
-
-- name: Download and build OpenCV from source
-  ansible.builtin.import_playbook: plays/download_and_install_opencv.yml
