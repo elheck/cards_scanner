@@ -7,8 +7,10 @@ on:
     branches: [ main ]
 
 jobs:
-  quality:
+  build-image:
     runs-on: ubuntu-latest
+    outputs:
+      image: ${{ steps.build.outputs.imageid }}
 
     steps:
     - uses: actions/checkout@v4
@@ -18,12 +20,37 @@ jobs:
       with:
         driver: docker-container
 
-    - name: Cache Docker layers
-      uses: actions/cache@v4
+    - name: Build and export image
+      uses: docker/build-push-action@v5
+      id: build
       with:
-        path: /tmp/.buildx-cache
-        key: ${{ runner.os }}-buildx-${{ hashFiles('.devcontainer/Dockerfile') }}
-        restore-keys: ${{ runner.os }}-buildx-
+        context: .
+        file: .devcontainer/Dockerfile
+        tags: card-scanner-dev:latest
+        outputs: type=docker,dest=/tmp/image.tar
+
+    - name: Upload image artifact
+      uses: actions/upload-artifact@v4
+      with:
+        name: docker-image
+        path: /tmp/image.tar
+        retention-days: 1
+
+  quality:
+    runs-on: ubuntu-latest
+    needs: build-image
+
+    steps:
+    - uses: actions/checkout@v4
+
+    - name: Download image artifact
+      uses: actions/download-artifact@v4
+      with:
+        name: docker-image
+        path: /tmp
+
+    - name: Load image
+      run: docker load -i /tmp/image.tar
 
     - name: Cache Conan packages
       uses: actions/cache@v4
@@ -32,59 +59,39 @@ jobs:
         key: ${{ runner.os }}-conan-${{ hashFiles('conan-*.lock') }}
         restore-keys: ${{ runner.os }}-conan-
 
-    - name: Build devcontainer image
-      uses: docker/build-push-action@v5
-      with:
-        context: .
-        file: .devcontainer/Dockerfile
-        tags: card-scanner-dev:latest
-        load: true
-        cache-from: type=local,src=/tmp/.buildx-cache
-        cache-to: type=local,dest=/tmp/.buildx-cache-new,mode=max
-
-    - name: Move cache
-      run: |
-        rm -rf /tmp/.buildx-cache
-        mv /tmp/.buildx-cache-new /tmp/.buildx-cache
-
     - name: Run rebuild.sh
       run: |
         docker run --rm \
           -v ${{ github.workspace }}:/workspace \
-          -v ~/.conan2:/home/vscode/.conan2 \
+          -v ~/.conan2:/root/.conan2 \
           -w /workspace \
-          -u vscode \
-          card-scanner-dev \
+          card-scanner-dev:latest \
           bash ./rebuild.sh
 
     - name: Run quality checks
       run: |
         docker run --rm \
           -v ${{ github.workspace }}:/workspace \
-          -v ~/.conan2:/home/vscode/.conan2 \
+          -v ~/.conan2:/root/.conan2 \
           -w /workspace \
-          -u vscode \
-          card-scanner-dev \
+          card-scanner-dev:latest \
           bash ./run_quality_tests.sh
 
   lock-drift:
     runs-on: ubuntu-latest
-    needs: [quality]
+    needs: [build-image, quality]
 
     steps:
     - uses: actions/checkout@v4
 
-    - name: Set up Docker Buildx
-      uses: docker/setup-buildx-action@v3
+    - name: Download image artifact
+      uses: actions/download-artifact@v4
       with:
-        driver: docker-container
+        name: docker-image
+        path: /tmp
 
-    - name: Cache Docker layers
-      uses: actions/cache@v4
-      with:
-        path: /tmp/.buildx-cache
-        key: ${{ runner.os }}-buildx-${{ hashFiles('.devcontainer/Dockerfile') }}
-        restore-keys: ${{ runner.os }}-buildx-
+    - name: Load image
+      run: docker load -i /tmp/image.tar
 
     - name: Cache Conan packages
       uses: actions/cache@v4
@@ -93,23 +100,13 @@ jobs:
         key: ${{ runner.os }}-conan-${{ hashFiles('conan-*.lock') }}
         restore-keys: ${{ runner.os }}-conan-
 
-    - name: Build devcontainer image
-      uses: docker/build-push-action@v5
-      with:
-        context: .
-        file: .devcontainer/Dockerfile
-        tags: card-scanner-dev:latest
-        load: true
-        cache-from: type=local,src=/tmp/.buildx-cache
-
     - name: Check lock drift
       run: |
         docker run --rm \
           -v ${{ github.workspace }}:/workspace \
-          -v ~/.conan2:/home/vscode/.conan2 \
+          -v ~/.conan2:/root/.conan2 \
           -w /workspace \
-          -u vscode \
-          card-scanner-dev \
+          card-scanner-dev:latest \
           bash -c '
             set -e
             ARCH_FILE="conan-$(uname -m).lock"
