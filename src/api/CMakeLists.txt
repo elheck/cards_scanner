@@ -6,12 +6,15 @@ target_include_directories(api_lib PUBLIC
     ${CMAKE_CURRENT_SOURCE_DIR}/include
 )
 
-find_package(CURL REQUIRED)
+find_package(httplib REQUIRED)
 find_package(nlohmann_json REQUIRED)
 find_package(spdlog REQUIRED)
+find_package(OpenSSL REQUIRED)
 
 target_link_libraries(api_lib PUBLIC
-    CURL::libcurl
+    httplib::httplib
     nlohmann_json::nlohmann_json
     spdlog::spdlog
+    OpenSSL::SSL
+    OpenSSL::Crypto
 )

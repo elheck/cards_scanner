@@ -1,4 +1,5 @@
-#include <curl/curl.h>
+#define CPPHTTPLIB_OPENSSL_SUPPORT
+#include <httplib.h>
 #include <nlohmann/json.hpp>
 #include <scryfall_client.hpp>
 #include <spdlog/spdlog.h>
@@ -12,14 +13,6 @@
 namespace api {
 
 namespace {
-// Callback for libcurl to write received data
-size_t writeCallback(void *contents, size_t size, size_t nmemb,
-                     std::string *userp) {
-  size_t totalSize = size * nmemb;
-  userp->append(static_cast<char *>(contents), totalSize);
-  return totalSize;
-}
-
 std::string getDefaultCacheDir() {
   const char *home = std::getenv("HOME");
   if (home) {
@@ -32,8 +25,6 @@ std::string getDefaultCacheDir() {
 ScryfallClient::ScryfallClient(const std::filesystem::path &cacheDir)
     : cacheDir_(cacheDir.empty() ? std::filesystem::path(getDefaultCacheDir())
                                  : cacheDir) {
-  curl_global_init(CURL_GLOBAL_DEFAULT);
-
   // Create cache directory if it doesn't exist
   if (!std::filesystem::exists(cacheDir_)) {
     std::filesystem::create_directories(cacheDir_);
@@ -41,43 +32,35 @@ ScryfallClient::ScryfallClient(const std::filesystem::path &cacheDir)
   }
 }
 
-ScryfallClient::~ScryfallClient() { curl_global_cleanup(); }
+ScryfallClient::~ScryfallClient() = default;
 
 std::string ScryfallClient::httpGet(const std::string &url) const {
-  CURL *curl = curl_easy_init();
-  if (!curl) {
-    spdlog::error("Failed to initialize CURL");
+  // Parse URL to extract host and path
+  // URL format: https://api.scryfall.com/cards/...
+  std::string path = url.substr(std::string(BASE_URL).length());
+
+  httplib::Client cli(BASE_URL);
+  cli.set_connection_timeout(10);
+  cli.set_read_timeout(10);
+  cli.set_follow_location(true);
+
+  httplib::Headers headers = {{"User-Agent", "MTGCardScanner/1.0"}};
+
+  auto res = cli.Get(path, headers);
+
+  if (!res) {
+    spdlog::error("HTTP request failed: {}", httplib::to_string(res.error()));
     return "";
   }
 
-  std::string response;
-
-  curl_easy_setopt(curl, CURLOPT_URL, url.c_str());
-  curl_easy_setopt(curl, CURLOPT_WRITEFUNCTION, writeCallback);
-  curl_easy_setopt(curl, CURLOPT_WRITEDATA, &response);
-  curl_easy_setopt(curl, CURLOPT_USERAGENT, "MTGCardScanner/1.0");
-  curl_easy_setopt(curl, CURLOPT_TIMEOUT, 10L);
-  curl_easy_setopt(curl, CURLOPT_FOLLOWLOCATION, 1L);
-
-  CURLcode res = curl_easy_perform(curl);
-
-  if (res != CURLE_OK) {
-    spdlog::error("CURL request failed: {}", curl_easy_strerror(res));
-    response.clear();
-  }
-
-  long httpCode = 0;
-  curl_easy_getinfo(curl, CURLINFO_RESPONSE_CODE, &httpCode);
-
-  if (httpCode != 200) {
-    spdlog::debug("Scryfall API returned HTTP {}", httpCode);
-    if (httpCode == 404) {
-      response.clear();
+  if (res->status != 200) {
+    spdlog::debug("Scryfall API returned HTTP {}", res->status);
+    if (res->status == 404) {
+      return "";
     }
   }
 
-  curl_easy_cleanup(curl);
-  return response;
+  return res->body;
 }
 
 std::string ScryfallClient::urlEncode(const std::string &str) const {
