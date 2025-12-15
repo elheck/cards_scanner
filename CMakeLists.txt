@@ -94,22 +94,59 @@ set(TESSDATA_DIR "${CMAKE_BINARY_DIR}/tessdata")
 set(TESSDATA_LANG "eng")
 set(TESSDATA_FILE "${TESSDATA_DIR}/${TESSDATA_LANG}.traineddata")
 
+# Check if file exists and has non-zero size
+if(EXISTS "${TESSDATA_FILE}")
+    file(SIZE "${TESSDATA_FILE}" TESSDATA_SIZE)
+    if(TESSDATA_SIZE EQUAL 0)
+        message(WARNING "Tessdata file exists but is empty, removing and re-downloading...")
+        file(REMOVE "${TESSDATA_FILE}")
+    endif()
+endif()
+
 if(NOT EXISTS "${TESSDATA_FILE}")
     message(STATUS "Downloading Tesseract trained data (${TESSDATA_LANG}) - best quality...")
     file(MAKE_DIRECTORY "${TESSDATA_DIR}")
-    file(DOWNLOAD
+    
+    # Try multiple mirrors with retry logic
+    set(DOWNLOAD_URLS
         "https://github.com/tesseract-ocr/tessdata_best/raw/main/${TESSDATA_LANG}.traineddata"
-        "${TESSDATA_FILE}"
-        SHOW_PROGRESS
-        STATUS DOWNLOAD_STATUS
+        "https://raw.githubusercontent.com/tesseract-ocr/tessdata_best/main/${TESSDATA_LANG}.traineddata"
     )
-    list(GET DOWNLOAD_STATUS 0 DOWNLOAD_RESULT)
-    if(NOT DOWNLOAD_RESULT EQUAL 0)
-        message(FATAL_ERROR "Failed to download Tesseract trained data: ${DOWNLOAD_STATUS}")
+    
+    set(DOWNLOAD_SUCCESS FALSE)
+    foreach(URL ${DOWNLOAD_URLS})
+        message(STATUS "Attempting download from: ${URL}")
+        file(DOWNLOAD
+            "${URL}"
+            "${TESSDATA_FILE}"
+            TIMEOUT 120
+            TLS_VERIFY ON
+            STATUS DOWNLOAD_STATUS
+        )
+        list(GET DOWNLOAD_STATUS 0 DOWNLOAD_RESULT)
+        if(DOWNLOAD_RESULT EQUAL 0)
+            # Verify the file was actually downloaded
+            file(SIZE "${TESSDATA_FILE}" TESSDATA_SIZE)
+            if(TESSDATA_SIZE GREATER 0)
+                set(DOWNLOAD_SUCCESS TRUE)
+                message(STATUS "Successfully downloaded ${TESSDATA_LANG}.traineddata (${TESSDATA_SIZE} bytes)")
+                break()
+            else()
+                message(WARNING "Download succeeded but file is empty, trying next URL...")
+                file(REMOVE "${TESSDATA_FILE}")
+            endif()
+        else()
+            list(GET DOWNLOAD_STATUS 1 DOWNLOAD_ERROR)
+            message(WARNING "Download failed: ${DOWNLOAD_ERROR}")
+        endif()
+    endforeach()
+    
+    if(NOT DOWNLOAD_SUCCESS)
+        message(FATAL_ERROR "Failed to download Tesseract trained data from all available sources. Please check your internet connection or download manually from: https://github.com/tesseract-ocr/tessdata_best/blob/main/${TESSDATA_LANG}.traineddata")
     endif()
-    message(STATUS "Successfully downloaded ${TESSDATA_LANG}.traineddata (best quality)")
 else()
-    message(STATUS "Tesseract trained data already present: ${TESSDATA_FILE}")
+    file(SIZE "${TESSDATA_FILE}" TESSDATA_SIZE)
+    message(STATUS "Tesseract trained data already present: ${TESSDATA_FILE} (${TESSDATA_SIZE} bytes)")
 endif()
 
 # Set TESSDATA_PREFIX for runtime

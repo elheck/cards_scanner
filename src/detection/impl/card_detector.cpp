@@ -1,3 +1,4 @@
+#include <algorithm>
 #include <array>
 #include <card_detector.hpp>
 #include <cmath>
@@ -212,10 +213,11 @@ bool detectCards(const cv::Mat &undistortedImage,
   if (approx_curve.size() == 4 && cv::isContourConvex(approx_curve)) {
     std::vector<cv::Point2f> corners;
     corners.reserve(approx_curve.size()); // Pre-allocate capacity
-    for (const auto &point : approx_curve) {
-      corners.emplace_back(static_cast<float>(point.x),
-                           static_cast<float>(point.y));
-    }
+    std::transform(approx_curve.begin(), approx_curve.end(),
+                   std::back_inserter(corners), [](const cv::Point &point) {
+                     return cv::Point2f(static_cast<float>(point.x),
+                                        static_cast<float>(point.y));
+                   });
 
     // Sort corners and warp the card
     cv::Mat warped = warpCard(corners, undistortedImage);
@@ -232,9 +234,7 @@ bool detectCards(const cv::Mat &undistortedImage,
 
   std::vector<cv::Point2f> corners;
   corners.reserve(4); // Pre-allocate capacity
-  for (const auto &vertex : vertices) {
-    corners.push_back(vertex);
-  }
+  std::copy(vertices.begin(), vertices.end(), std::back_inserter(corners));
 
   cv::Mat warped = warpCard(corners, undistortedImage);
   if (!warped.empty()) {
