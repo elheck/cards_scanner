@@ -6,51 +6,73 @@ on:
   pull_request:
     branches: [ main ]
 
+env:
+  REGISTRY: ghcr.io
+  IMAGE_NAME: ${{ github.repository }}-dev
+
 jobs:
   build-image:
     runs-on: ubuntu-latest
+    permissions:
+      contents: read
+      packages: write
     outputs:
-      image: ${{ steps.build.outputs.imageid }}
+      image: ${{ steps.meta.outputs.tags }}
+      image-digest: ${{ steps.build.outputs.digest }}
 
     steps:
     - uses: actions/checkout@v4
 
+    - name: Check for Dockerfile changes
+      id: dockerfile-changes
+      uses: dorny/paths-filter@v3
+      with:
+        filters: |
+          dockerfile:
+            - '.devcontainer/Dockerfile'
+
     - name: Set up Docker Buildx
       uses: docker/setup-buildx-action@v3
-      with:
-        driver: docker-container
 
-    - name: Build and export image
+    - name: Log in to Container Registry
+      uses: docker/login-action@v3
+      with:
+        registry: ${{ env.REGISTRY }}
+        username: ${{ github.actor }}
+        password: ${{ secrets.GITHUB_TOKEN }}
+
+    - name: Extract metadata for Docker
+      id: meta
+      uses: docker/metadata-action@v5
+      with:
+        images: ${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}
+        tags: |
+          type=sha,prefix=
+          type=raw,value=latest,enable={{is_default_branch}}
+
+    - name: Build and push image
       uses: docker/build-push-action@v5
       id: build
       with:
         context: .
         file: .devcontainer/Dockerfile
-        tags: card-scanner-dev:latest
-        outputs: type=docker,dest=/tmp/image.tar
-
-    - name: Upload image artifact
-      uses: actions/upload-artifact@v4
-      with:
-        name: docker-image
-        path: /tmp/image.tar
-        retention-days: 1
+        push: true
+        tags: ${{ steps.meta.outputs.tags }}
+        labels: ${{ steps.meta.outputs.labels }}
+        cache-from: type=registry,ref=${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}:latest
+        cache-to: type=inline
 
   quality:
     runs-on: ubuntu-latest
     needs: build-image
+    container:
+      image: ${{ needs.build-image.outputs.image }}
+      credentials:
+        username: ${{ github.actor }}
+        password: ${{ secrets.GITHUB_TOKEN }}
 
     steps:
     - uses: actions/checkout@v4
-
-    - name: Download image artifact
-      uses: actions/download-artifact@v4
-      with:
-        name: docker-image
-        path: /tmp
-
-    - name: Load image
-      run: docker load -i /tmp/image.tar
 
     - name: Cache Conan packages
       uses: actions/cache@v4
@@ -60,38 +82,22 @@ jobs:
         restore-keys: ${{ runner.os }}-conan-
 
     - name: Run rebuild.sh
-      run: |
-        docker run --rm \
-          -v ${{ github.workspace }}:/workspace \
-          -v ~/.conan2:/root/.conan2 \
-          -w /workspace \
-          card-scanner-dev:latest \
-          bash ./rebuild.sh
+      run: bash ./rebuild.sh
 
     - name: Run quality checks
-      run: |
-        docker run --rm \
-          -v ${{ github.workspace }}:/workspace \
-          -v ~/.conan2:/root/.conan2 \
-          -w /workspace \
-          card-scanner-dev:latest \
-          bash ./run_quality_tests.sh
+      run: bash ./run_quality_tests.sh
 
   lock-drift:
     runs-on: ubuntu-latest
     needs: [build-image, quality]
+    container:
+      image: ${{ needs.build-image.outputs.image }}
+      credentials:
+        username: ${{ github.actor }}
+        password: ${{ secrets.GITHUB_TOKEN }}
 
     steps:
     - uses: actions/checkout@v4
-
-    - name: Download image artifact
-      uses: actions/download-artifact@v4
-      with:
-        name: docker-image
-        path: /tmp
-
-    - name: Load image
-      run: docker load -i /tmp/image.tar
 
     - name: Cache Conan packages
       uses: actions/cache@v4
@@ -102,27 +108,20 @@ jobs:
 
     - name: Check lock drift
       run: |
-        docker run --rm \
-          -v ${{ github.workspace }}:/workspace \
-          -v ~/.conan2:/root/.conan2 \
-          -w /workspace \
-          card-scanner-dev:latest \
-          bash -c '
-            set -e
-            ARCH_FILE="conan-$(uname -m).lock"
-            if [ ! -f "$ARCH_FILE" ]; then
-              echo "Missing lockfile: $ARCH_FILE" >&2
-              exit 1
-            fi
-            conan lock create . --lockfile="$ARCH_FILE" --lockfile-out=drift.lock --build=never || {
-              echo "Unexpected build attempted (lock incomplete)"
-              exit 1
-            }
-            if ! diff -q "$ARCH_FILE" drift.lock >/dev/null; then
-              echo "Lockfile drift detected. Run ./update_lock.sh and commit updated $ARCH_FILE." >&2
-              echo "--- Diff (truncated) ---"
-              diff -u "$ARCH_FILE" drift.lock | head -n 200 || true
-              exit 1
-            fi
-            echo "No lock drift detected."
-          '
+        set -e
+        ARCH_FILE="conan-$(uname -m).lock"
+        if [ ! -f "$ARCH_FILE" ]; then
+          echo "Missing lockfile: $ARCH_FILE" >&2
+          exit 1
+        fi
+        conan lock create . --lockfile="$ARCH_FILE" --lockfile-out=drift.lock --build=never || {
+          echo "Unexpected build attempted (lock incomplete)"
+          exit 1
+        }
+        if ! diff -q "$ARCH_FILE" drift.lock >/dev/null; then
+          echo "Lockfile drift detected. Run ./update_lock.sh and commit updated $ARCH_FILE." >&2
+          echo "--- Diff (truncated) ---"
+          diff -u "$ARCH_FILE" drift.lock | head -n 200 || true
+          exit 1
+        fi
+        echo "No lock drift detected."
