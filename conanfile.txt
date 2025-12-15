@@ -8,6 +8,7 @@ libassert/2.1.4
 ms-gsl/4.1.0
 cpp-httplib/0.18.1
 nlohmann_json/3.11.3
+cxxopts/3.1.1
 
 [options]
 opencv/*:shared=True

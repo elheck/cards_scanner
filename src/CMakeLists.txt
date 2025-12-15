@@ -4,6 +4,7 @@ find_package(Tesseract REQUIRED)
 find_package(spdlog REQUIRED)
 find_package(libassert REQUIRED)
 find_package(Microsoft.GSL REQUIRED)
+find_package(cxxopts REQUIRED)
 
 # Add the library subdirectories
 add_subdirectory(misc)
@@ -31,4 +32,5 @@ target_link_libraries(card_scanner
         spdlog::spdlog
         libassert::assert
         Microsoft.GSL::GSL
+        cxxopts::cxxopts
 )

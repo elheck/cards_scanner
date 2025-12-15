@@ -512,16 +512,7 @@ On startup, the device receives configuration from a PC:
 - **Card kind** filters
 
 ### Post-OCR Communication
-
-After processing a card, the device sends via MQTT (or similar):
-- Card **name**
-- Card **set**
-- **Collector's number**
-- **Image hash**
-- **Bin identifier**
-
-This allows the PC to verify against a card database.
-
+- Not sure yet
 ---
 
 ## License
@@ -533,8 +524,7 @@ This allows the PC to verify against a card database.
 ## Contributing
 
 *Add contribution guidelines here*
-add to path
-new profile detect
+
 
 
 # Notes for HW build

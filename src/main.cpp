@@ -1,57 +1,52 @@
+
 #include <detection_builder.hpp>
 #include <path_helper.hpp>
 #include <pic_helper.hpp>
 
+#include <cxxopts.hpp>
 #include <gsl/span>
 #include <libassert/assert.hpp>
 #include <spdlog/spdlog.h>
 
+#include <array>
 #include <iostream>
+#include <stdexcept>
 #include <string>
 
-void printUsage(std::string_view programName) {
-  spdlog::info("Usage: {} [options]", programName);
-  spdlog::info("Options:");
-  spdlog::info("  -f, --file <path>    Process a card from an image file");
-  spdlog::info("  -h, --help           Show this help message");
+[[nodiscard]] std::filesystem::path getCommandLineParameters(int argc,
+                                                             char **argv) {
+  std::filesystem::path image_path;
+
+  try {
+    cxxopts::Options options("card_scanner", "MTG Card Scanner");
+    options.add_options()("f,file", "Process a card from an image file",
+                          cxxopts::value<std::string>())(
+        "h,help", "Show this help message");
+
+    auto result = options.parse(argc, argv);
+
+    if (result.count("help") > 0) {
+      spdlog::info("{}", options.help());
+      exit(0);
+    }
+
+    if (result.count("file") > 0) {
+      image_path = result["file"].as<std::string>();
+    } else {
+      spdlog::critical("Error: No input file specified");
+      spdlog::info("{}", options.help());
+      abort();
+    }
+  } catch (const cxxopts::exceptions::exception &e) {
+    spdlog::critical("Error parsing options: {}", e.what());
+    abort();
+  }
+  return image_path;
 }
 
 int main(int argc, char *argv[]) {
-  const gsl::span args{argv, static_cast<std::size_t>(argc)};
-  std::filesystem::path image_path;
 
-  ASSERT(args.size() > 1, "No arguments given", args.size());
-
-  // Parse command line arguments
-  for (size_t i = 1; i < args.size(); ++i) {
-    std::string_view arg{args[i]};
-
-    if (arg == "-h" || arg == "--help") {
-      printUsage(args[0]);
-      return 0;
-    }
-
-    if (arg == "-f" || arg == "--file") {
-      if (i + 1 >= args.size()) {
-        spdlog::critical("Error: Missing file path");
-        printUsage(args[0]);
-        return 1;
-      }
-      image_path = args[++i];
-      continue;
-    }
-
-    spdlog::critical("Error: Unknown option: {}", arg);
-    printUsage(args[0]);
-    return 1;
-  }
-
-  // Check if image path is provided and exists
-  if (image_path.empty()) {
-    spdlog::critical("Error: No input file specified");
-    printUsage(args[0]);
-    return 1;
-  }
+  auto image_path = getCommandLineParameters(argc, argv);
 
   if (!std::filesystem::exists(image_path)) {
     spdlog::critical("Error: Input file does not exist: {}",
@@ -75,9 +70,6 @@ int main(int argc, char *argv[]) {
     spdlog::info("Processing completed successfully");
   } catch (const std::runtime_error &e) {
     spdlog::critical("Error processing card: {}", e.what());
-    return 1;
-  } catch (const std::exception &e) {
-    spdlog::critical("Unexpected error: {}", e.what());
     return 1;
   }
 
