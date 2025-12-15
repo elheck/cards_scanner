@@ -72,6 +72,9 @@ jobs:
         key: ${{ runner.os }}-conan-${{ hashFiles('conan-*.lock') }}
         restore-keys: ${{ runner.os }}-conan-
 
+    - name: Setup Conan profile
+      run: conan profile detect --force
+
     - name: Run rebuild.sh
       run: bash ./rebuild.sh
 
@@ -96,6 +99,9 @@ jobs:
         path: ~/.conan2
         key: ${{ runner.os }}-conan-${{ hashFiles('conan-*.lock') }}
         restore-keys: ${{ runner.os }}-conan-
+
+    - name: Setup Conan profile
+      run: conan profile detect --force
 
     - name: Check lock drift
       run: |
